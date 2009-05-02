@@ -1,4 +1,4 @@
- 0.1..1 -- ?? ??? 2009
+ 0.11.1 -- ?? ??? 2009
 -----------------------
 
 * Bugfix in the EchoLink module: Short callsign (<6 chars) was not handled
