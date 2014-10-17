@@ -92,7 +92,7 @@ namespace Async
  ****************************************************************************/
 
 class ToneDet;
-class NetTrxTcpClient;
+class NetTrxClient;
   
 
 /****************************************************************************
@@ -194,7 +194,7 @@ class NetRx : public Rx
   private:
     Async::Config     	&cfg;
     Rx::MuteState       mute_state;
-    NetTrxTcpClient  	*tcp_con;
+    NetTrxClient  	*tcp_con;
     float     	      	last_signal_strength;
     int       	      	last_sql_rx_id;
     std::list<ToneDet*> tone_detectors;

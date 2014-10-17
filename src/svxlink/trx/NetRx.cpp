@@ -56,7 +56,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include "NetRx.h"
 #include "NetTrxMsg.h"
-#include "NetTrxTcpClient.h"
+#include "NetTrxClient.h"
 
 
 /****************************************************************************
@@ -92,10 +92,10 @@ class ToneDet
     int   bw;
     float thresh;
     int   required_duration;
-    
+
     ToneDet(float fq, int bw, float thresh, int required_duration)
       : fq(fq), bw(bw), thresh(thresh), required_duration(required_duration) {}
-    
+
 };
 
 
@@ -142,16 +142,16 @@ NetRx::~NetRx(void)
 {
   clearHandler();
   delete audio_dec;
-  
+
   tcp_con->deleteInstance();
-  
+
   list<ToneDet*>::iterator it;
   for (it=tone_detectors.begin(); it!=tone_detectors.end(); ++it)
   {
     delete *it;
   }
   tone_detectors.clear();
-  
+
 } /* NetRx::~NetRx */
 
 
@@ -161,7 +161,7 @@ bool NetRx::initialize(void)
   {
     return false;
   }
-  
+
   string host;
   if (!cfg.getValue(name(), "HOST", host))
   {
@@ -171,20 +171,20 @@ bool NetRx::initialize(void)
 
   string tcp_port(NET_TRX_DEFAULT_TCP_PORT);
   cfg.getValue(name(), "TCP_PORT", tcp_port);
-  
+
   string udp_port(NET_TRX_DEFAULT_UDP_PORT);
   cfg.getValue(name(), "UDP_PORT", udp_port);
-  
+
   string audio_dec_name;
   cfg.getValue(name(), "CODEC", audio_dec_name);
   if (audio_dec_name.empty())
   {
     audio_dec_name = "RAW";
   }
-  
+
   string auth_key;
   cfg.getValue(name(), "AUTH_KEY", auth_key);
-  
+
   audio_dec = AudioDecoder::create(audio_dec_name);
   if (audio_dec == 0)
   {
@@ -210,15 +210,15 @@ bool NetRx::initialize(void)
   }
   audio_dec->printCodecParams();
   setHandler(audio_dec);
-  
-  tcp_con = NetTrxTcpClient::instance(host, atoi(tcp_port.c_str()));
+
+  tcp_con = NetTrxClient::instance(host, atoi(tcp_port.c_str()));
   tcp_con->setAuthKey(auth_key);
   tcp_con->isReady.connect(mem_fun(*this, &NetRx::connectionReady));
   tcp_con->msgReceived.connect(mem_fun(*this, &NetRx::handleMsg));
   tcp_con->connect();
-  
+
   return true;
-  
+
 } /* NetRx:initialize */
 
 
@@ -259,10 +259,10 @@ void NetRx::setMuteState(Rx::MuteState new_mute_state)
       mute_state = new_mute_state;
     }
   }
-   
+
   MsgSetMuteState *msg = new MsgSetMuteState(mute_state);
   sendMsg(msg);
-  
+
 } /* NetRx::setMuteState */
 
 
@@ -271,11 +271,11 @@ bool NetRx::addToneDetector(float fq, int bw, float thresh,
 {
   ToneDet *det = new ToneDet(fq, bw, thresh, required_duration);
   tone_detectors.push_back(det);
-  
+
   MsgAddToneDetector *msg =
       new MsgAddToneDetector(fq, bw, thresh, required_duration);
   sendMsg(msg);
-  
+
   return true;
 
 } /* NetRx::addToneDetector */
@@ -289,12 +289,12 @@ void NetRx::reset(void)
     delete *it;
   }
   tone_detectors.clear();
-  
+
   mute_state = Rx::MUTE_ALL;
   last_signal_strength = 0;
   last_sql_rx_id = 0;
   sql_is_open = false;
-  
+
   if (unflushed_samples)
   {
     audio_dec->flushEncodedSamples();
@@ -323,7 +323,7 @@ void NetRx::reset(void)
  *
  * Private member functions
  *
- ****************************************************************************/                        
+ ****************************************************************************/
 
 void NetRx::connectionReady(bool is_ready)
 {
@@ -331,13 +331,13 @@ void NetRx::connectionReady(bool is_ready)
   {
     cout << name() << ": Connected to remote receiver at "
         << tcp_con->remoteHost() << ":" << tcp_con->remotePort() << "\n";
-    
+
     if (mute_state != Rx::MUTE_ALL)
     {
       MsgSetMuteState *msg = new MsgSetMuteState(mute_state);
       sendMsg(msg);
     }
-    
+
     list<ToneDet*>::iterator it;
     for (it=tone_detectors.begin(); it!=tone_detectors.end(); ++it)
     {
@@ -346,7 +346,7 @@ void NetRx::connectionReady(bool is_ready)
                                 (*it)->required_duration);
       sendMsg(msg);
     }
-    
+
     MsgAudioCodecSelect *msg = new MsgRxAudioCodecSelect(audio_dec->name());
     string opt_prefix(audio_dec->name());
     opt_prefix += "_ENC_";
@@ -356,7 +356,7 @@ void NetRx::connectionReady(bool is_ready)
     {
       if ((*nit).find(opt_prefix) == 0)
       {
-	string opt_value;
+     	string opt_value;
       	cfg.getValue(name(), *nit, opt_value);
       	string opt_name((*nit).substr(opt_prefix.size()));
       	msg->addOption(opt_name, opt_value);
@@ -371,7 +371,7 @@ void NetRx::connectionReady(bool is_ready)
         << tcp_con->remoteHost() << ":" << tcp_con->remotePort() << ": "
         << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
         << "\n";
-    
+
     sql_is_open = false;
     if (unflushed_samples)
     {
@@ -415,7 +415,7 @@ void NetRx::handleMsg(Msg *msg)
       }
       break;
     }
-    
+
     case MsgSiglevUpdate::TYPE:
     {
       if (mute_state != Rx::MUTE_ALL)
@@ -427,7 +427,7 @@ void NetRx::handleMsg(Msg *msg)
       }
       break;
     }
-    
+
     case MsgDtmf::TYPE:
     {
       if (mute_state == Rx::MUTE_NONE)
@@ -437,7 +437,7 @@ void NetRx::handleMsg(Msg *msg)
       }
       break;
     }
-    
+
     case MsgTone::TYPE:
     {
       if (mute_state == Rx::MUTE_NONE)
@@ -447,7 +447,7 @@ void NetRx::handleMsg(Msg *msg)
       }
       break;
     }
-    
+
     case MsgAudio::TYPE:
     {
       if ((mute_state == Rx::MUTE_NONE) && sql_is_open)
@@ -458,7 +458,7 @@ void NetRx::handleMsg(Msg *msg)
       }
       break;
     }
-    
+
     case MsgSel5::TYPE:
     {
       if (mute_state == Rx::MUTE_NONE)
@@ -476,7 +476,7 @@ void NetRx::handleMsg(Msg *msg)
       break;
     */
   }
-  
+
 } /* NetRx::handleMsg */
 
 

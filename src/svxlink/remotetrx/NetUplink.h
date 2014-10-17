@@ -47,6 +47,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ****************************************************************************/
 
 #include <AsyncTcpConnection.h>
+#include <AsyncUdpSocket.h>
+#include <AsyncIpAddress.h>
 #include <NetTrxMsg.h>
 
 
@@ -139,36 +141,38 @@ class NetUplink : public Uplink
      */
     NetUplink(Async::Config &cfg, const std::string &name, Rx *rx, Tx *tx,
       	      const std::string& port_str = NET_TRX_DEFAULT_TCP_PORT);
-  
+
     /**
      * @brief 	Destructor
      */
     ~NetUplink(void);
-  
+
     /**
      * @brief 	Initialize the uplink
      * @return	Return \em true on success or \em false on failure
      */
     bool initialize(void);
-    
+
     /**
      * @brief Setup the authentication key
      * @param key The autentication key to use
      */
     void setAuthKey(const std::string &key) { auth_key = key; }
-    
+
 
   protected:
-    
+
   private:
     typedef enum
     {
       STATE_DISC, STATE_AUTH_WAIT, STATE_READY
     } State;
-    
+
     Async::TcpServer  	    *server;
+    Async::UdpSocket        *udp_sock;
     Async::TcpConnection    *con;
     char      	      	    recv_buf[4096];
+    char      	      	    recv_ubuf[4096];
     unsigned       	    recv_cnt;
     unsigned       	    recv_exp;
     Rx	      	      	    *rx;
@@ -191,7 +195,7 @@ class NetUplink : public Uplink
     bool		    tx_muted;
     bool                    fallback_enabled;
     Tx::TxCtrlMode	    tx_ctrl_mode;
-    
+
     NetUplink(const NetUplink&);
     NetUplink& operator=(const NetUplink&);
     void clientConnected(Async::TcpConnection *con);
@@ -200,25 +204,26 @@ class NetUplink : public Uplink
     int tcpDataReceived(Async::TcpConnection *con, void *data, int size);
     void handleMsg(NetTrxMsg::Msg *msg);
     void sendMsg(NetTrxMsg::Msg *msg);
+    void handleAudioMsg(NetTrxMsg::Msg *msg);
 
     /**
      * @brief 	Set squelch state to open/closed
      * @param 	is_open Set to \em true if open or \em false if closed
      */
     void squelchOpen(bool is_open);
-    
+
     /**
      * @brief 	Pass on received DTMF digit
      * @param 	digit The received digit
      */
     void dtmfDigitDetected(char digit, int duration);
-    
+
     /**
      * @brief 	Pass on detected tone
      * @param 	tone_fq The frequency of the received tone
      */
     void toneDetected(float tone_fq);
-    
+
     /**
      * @brief 	Pass on detected selcall sequence
      * @param 	sequence received sequence of digits
@@ -235,6 +240,7 @@ class NetUplink : public Uplink
     void unmuteTx(Async::Timer *t);
     void setFallbackActive(bool activate);
     void signalLevelUpdated(float siglev);
+    void udpDataReceived(const Async::IpAddress& addr, void *data, int size);
 
 };  /* class NetUplink */
 

@@ -57,7 +57,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include "NetTx.h"
 #include "NetTrxMsg.h"
-#include "NetTrxTcpClient.h"
+#include "NetTrxClient.h"
 
 
 /****************************************************************************
@@ -146,23 +146,23 @@ bool NetTx::initialize(void)
 
   string tcp_port(NET_TRX_DEFAULT_TCP_PORT);
   cfg.getValue(name, "TCP_PORT", tcp_port);
-  
+
   string udp_port(NET_TRX_DEFAULT_UDP_PORT);
   cfg.getValue(name, "UDP_PORT", udp_port);
-  
+
   string audio_enc_name;
   cfg.getValue(name, "CODEC", audio_enc_name);
   if (audio_enc_name.empty())
   {
     audio_enc_name = "RAW";
   }
-  
+
   string auth_key;
   cfg.getValue(name, "AUTH_KEY", auth_key);
-  
+
   pacer = new AudioPacer(INTERNAL_SAMPLE_RATE, 512, 50);
   setHandler(pacer);
-  
+
   audio_enc = AudioEncoder::create(audio_enc_name);
   if (audio_enc == 0)
   {
@@ -190,25 +190,25 @@ bool NetTx::initialize(void)
   }
   audio_enc->printCodecParams();
   pacer->registerSink(audio_enc);
-  
-  tcp_con = NetTrxTcpClient::instance(host, atoi(tcp_port.c_str()));
+
+  tcp_con = NetTrxClient::instance(host, atoi(tcp_port.c_str()));
   tcp_con->setAuthKey(auth_key);
   tcp_con->isReady.connect(mem_fun(*this, &NetTx::connectionReady));
   tcp_con->msgReceived.connect(mem_fun(*this, &NetTx::handleMsg));
   tcp_con->connect();
-  
+
   return true;
-  
+
 } /* NetTx:initialize */
 
 
 void NetTx::setTxCtrlMode(TxCtrlMode mode)
 {
   this->mode = mode;
-  
+
   MsgSetTxCtrlMode *msg = new MsgSetTxCtrlMode(mode);
   sendMsg(msg);
-  
+
   if (!is_connected)
   {
     switch (mode)
@@ -270,15 +270,15 @@ void NetTx::connectionReady(bool is_ready)
   {
     cout << name << ": Connected to remote transmitter at "
         << tcp_con->remoteHost() << ":" << tcp_con->remotePort() << "\n";
-    
+
     is_connected = true;
-    
+
     MsgSetTxCtrlMode *mode_msg = new MsgSetTxCtrlMode(mode);
     sendMsg(mode_msg);
-    
+
     MsgEnableCtcss *ctcss_msg = new MsgEnableCtcss(ctcss_enable);
     sendMsg(ctcss_msg);
-    
+
     MsgAudioCodecSelect *msg = new MsgTxAudioCodecSelect(audio_enc->name());
     cout << name << ": Requesting CODEC \"" << msg->name() << "\"\n";
     string opt_prefix(audio_enc->name());
@@ -289,10 +289,10 @@ void NetTx::connectionReady(bool is_ready)
     {
       if ((*nit).find(opt_prefix) == 0)
       {
-	string opt_value;
-	cfg.getValue(name, *nit, opt_value);
-	string opt_name((*nit).substr(opt_prefix.size()));
-	msg->addOption(opt_name, opt_value);
+	    string opt_value;
+	    cfg.getValue(name, *nit, opt_value);
+	    string opt_name((*nit).substr(opt_prefix.size()));
+	    msg->addOption(opt_name, opt_value);
       }
     }
     sendMsg(msg);
@@ -303,9 +303,9 @@ void NetTx::connectionReady(bool is_ready)
         << tcp_con->remoteHost() << ":" << tcp_con->remotePort() << ": "
         << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
         << "\n";
-    
+
     is_connected = false;
-  
+
     if (pending_flush)
     {
       allEncodedSamplesFlushed();
@@ -323,7 +323,7 @@ void NetTx::handleMsg(Msg *msg)
       txTimeout();
       break;
     }
-    
+
     case MsgTransmitterStateChange::TYPE:
     {
       MsgTransmitterStateChange *state_msg
@@ -331,13 +331,13 @@ void NetTx::handleMsg(Msg *msg)
       setIsTransmitting(state_msg->isTransmitting());
       break;
     }
-    
+
     case MsgAllSamplesFlushed::TYPE:
     {
       allEncodedSamplesFlushed();
       break;
     }
-    
+
     /*
     default:
       cerr << name << ": *** ERROR: Unknown TCP message received. Type="
@@ -345,7 +345,7 @@ void NetTx::handleMsg(Msg *msg)
       break;
     */
   }
-  
+
 } /* NetTx::handleMsg */
 
 
@@ -355,20 +355,32 @@ void NetTx::sendMsg(Msg *msg)
 } /* NetUplink::sendMsg */
 
 
+void NetTx::sendUdpMsg(Msg *msg)
+{
+  tcp_con->sendUdpMsg(msg);
+} /* NetUplink::sendMsg */
+
+
 void NetTx::writeEncodedSamples(const void *buf, int size)
 {
   pending_flush = false;
   unflushed_samples = true;
-  
+
   if (is_connected)
   {
+    struct timeval now;
     const char *ptr = reinterpret_cast<const char *>(buf);
     while (size > 0)
     {
       const int bufsize = MsgAudio::BUFSIZE;
       int len = min(size, bufsize);
-      MsgAudio *msg = new MsgAudio(ptr, len);
-      sendMsg(msg);
+      gettimeofday(&now, NULL);
+      uint64_t timeofsent = now.tv_usec;
+      uint64_t timeoftransmission = 0;
+      MsgTimedAudio *msg = new MsgTimedAudio(ptr, len, timeofsent, timeoftransmission);
+
+      //msg->timeofsent();
+      sendUdpMsg(msg);
       size -= len;
       ptr += len;
     }
@@ -415,7 +427,7 @@ void NetTx::allEncodedSamplesFlushed(void)
   unflushed_samples = false;
   pending_flush = false;
   audio_enc->allEncodedSamplesFlushed();
-  
+
   if (!is_connected && (mode == Tx::TX_AUTO))
   {
     setIsTransmitting(false);
