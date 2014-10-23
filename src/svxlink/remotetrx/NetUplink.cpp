@@ -510,7 +510,7 @@ void NetUplink::handleAudioMsg(Msg *msg)
 
     default:
     {
-      cout << "*** Unknown UDP packet received..." << endl;
+      cout << "*** NetUplink: Unknown UDP packet received, TYPE=" << msg->type() << ", size=" << msg->size() << endl;
     }
   }
 } /* NetUplink::handleAudioMsg */

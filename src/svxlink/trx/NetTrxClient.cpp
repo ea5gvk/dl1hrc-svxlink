@@ -133,10 +133,11 @@ NetTrxClient *NetTrxClient::instance(const std::string& remote_host,
   {
     con = new NetTrxClient(remote_host, remote_port, RECV_BUF_SIZE);
     clients[key] = con;
+    cout << "### Starting TCP instance for " << remote_host << ":"
+         << (remote_port) << endl;;
   }
 
   con->user_cnt += 1;
-
   return con;
 
 } /* NetTrxClient::instance */
@@ -214,9 +215,10 @@ NetTrxClient::NetTrxClient(const std::string& remote_host,
   heartbeat_timer->expired.connect(mem_fun(*this, &NetTrxClient::heartbeat));
 
   udp_port = remote_port + 1;
-  udp_sock = new UdpSocket(remote_port + 1);
+  udp_sock = new UdpSocket(udp_port);
   udp_sock->dataReceived.connect(mem_fun(*this, &NetTrxClient::udpDataReceived));
-  cout << "### Starting UDP socket on port " << (remote_port + 1) << endl;;
+  udpaddr = remote_host;
+  cout << "### Starting UDP socket on port " << udp_port << endl;
 
 } /* NetTrxClient::NetTrxClient */
 

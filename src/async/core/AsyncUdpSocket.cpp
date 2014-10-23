@@ -99,13 +99,13 @@ class UdpPacket
     int       	    port;
     char    	    buf[65535];
     int       	    len;
-    
+
     UdpPacket(const IpAddress& ip, int port, const void *buf, int len)
       : ip(ip), port(port), len(len)
     {
       memcpy(this->buf, buf, len);
     }
-  
+
 };
 
 
@@ -143,21 +143,21 @@ class UdpPacket
 
 /*
  *------------------------------------------------------------------------
- * Method:    
- * Purpose:   
- * Input:     
- * Output:    
- * Author:    
- * Created:   
- * Remarks:   
- * Bugs:      
+ * Method:
+ * Purpose:
+ * Input:
+ * Output:
+ * Author:
+ * Created:
+ * Remarks:
+ * Bugs:
  *------------------------------------------------------------------------
  */
 UdpSocket::UdpSocket(uint16_t local_port, const IpAddress &bind_ip)
   : sock(-1), rd_watch(0), wr_watch(0), send_buf(0)
 {
   struct sockaddr_in addr;
-  
+
     // Create UDP socket
   sock = socket(AF_INET, SOCK_DGRAM, 0);
   if(sock == -1)
@@ -166,7 +166,7 @@ UdpSocket::UdpSocket(uint16_t local_port, const IpAddress &bind_ip)
     cleanup();
     return;
   }
-  
+
     // Setup the socket for non-blocking operation
   if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
   {
@@ -174,7 +174,7 @@ UdpSocket::UdpSocket(uint16_t local_port, const IpAddress &bind_ip)
     cleanup();
     return;
   }
-  
+
     // Bind the socket to a local port if one was specified
   if (local_port > 0)
   {
@@ -197,7 +197,7 @@ UdpSocket::UdpSocket(uint16_t local_port, const IpAddress &bind_ip)
       return;
     }
   }
-  
+
     // Setup a watch for incoming data
   rd_watch = new FdWatch(sock, FdWatch::FD_WATCH_RD);
   assert(rd_watch != 0);
@@ -209,7 +209,7 @@ UdpSocket::UdpSocket(uint16_t local_port, const IpAddress &bind_ip)
   assert(wr_watch != 0);
   wr_watch->activity.connect(mem_fun(*this, &UdpSocket::sendRest));
   wr_watch->setEnabled(false);
-  
+
 } /* UdpSocket::UdpSocket */
 
 
@@ -226,7 +226,7 @@ bool UdpSocket::write(const IpAddress& remote_ip, int remote_port,
   {
     return false;
   }
-  
+
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(remote_port);
@@ -249,9 +249,9 @@ bool UdpSocket::write(const IpAddress& remote_ip, int remote_port,
     }
   }
   assert(ret == count);
-  
+
   return true;
-  
+
 } /* UdpSocket::write */
 
 
@@ -265,14 +265,14 @@ bool UdpSocket::write(const IpAddress& remote_ip, int remote_port,
 
 /*
  *------------------------------------------------------------------------
- * Method:    
- * Purpose:   
- * Input:     
- * Output:    
- * Author:    
- * Created:   
- * Remarks:   
- * Bugs:      
+ * Method:
+ * Purpose:
+ * Input:
+ * Output:
+ * Author:
+ * Created:
+ * Remarks:
+ * Bugs:
  *------------------------------------------------------------------------
  */
 
@@ -290,27 +290,27 @@ bool UdpSocket::write(const IpAddress& remote_ip, int remote_port,
 
 /*
  *----------------------------------------------------------------------------
- * Method:    
- * Purpose:   
- * Input:     
- * Output:    
- * Author:    
- * Created:   
- * Remarks:   
- * Bugs:      
+ * Method:
+ * Purpose:
+ * Input:
+ * Output:
+ * Author:
+ * Created:
+ * Remarks:
+ * Bugs:
  *----------------------------------------------------------------------------
  */
 void UdpSocket::cleanup(void)
 {
   delete rd_watch;
   rd_watch = 0;
-  
+
   delete wr_watch;
   wr_watch = 0;
-  
+
   delete send_buf;
   send_buf = 0;
-  
+
   if (sock != -1)
   {
     if (close(sock) == -1)
@@ -327,7 +327,7 @@ void UdpSocket::handleInput(FdWatch *watch)
   char buf[65536];
   struct sockaddr_in addr;
   socklen_t addr_len = sizeof(addr);
-  
+
   int len = recvfrom(sock, buf, sizeof(buf), 0,
       reinterpret_cast<struct sockaddr *>(&addr), &addr_len);
   if (len == -1)
@@ -335,9 +335,9 @@ void UdpSocket::handleInput(FdWatch *watch)
     perror("recvfrom in UdpSocket::handleInput");
     return;
   }
-  
+
   dataReceived(IpAddress(addr.sin_addr), buf, len);
-  
+
 } /* UdpSocket::handleInput */
 
 
@@ -370,11 +370,11 @@ void UdpSocket::sendRest(FdWatch *watch)
     assert(ret == send_buf->len);
     sendBufferFull(false);
   }
-  
+
   delete send_buf;
   send_buf = 0;
   wr_watch->setEnabled(false);
-  
+
 } /* UdpSocket::handleInput */
 
 
