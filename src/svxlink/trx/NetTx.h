@@ -174,8 +174,8 @@ class NetTx : public Tx
     virtual void sendDtmf(const std::string& digits);
     
     /**
-     *
-     *
+     * @brief
+     * @param
      */
     virtual void setSystemLatency(long system_latency);
     
@@ -195,6 +195,7 @@ class NetTx : public Tx
     bool      	      	  unflushed_samples;
     Async::AudioEncoder   *audio_enc;
     long                  own_latency;
+    bool                  simulcast;
     
     void connectionReady(bool is_ready);
     void handleMsg(NetTrxMsg::Msg *msg);

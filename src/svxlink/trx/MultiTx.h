@@ -177,8 +177,8 @@ class MultiTx : public Tx
     virtual void setTransmittedSignalStrength(float siglev);
     
     /**
-     *
-     *
+     * @brief
+     * @param
      */
     virtual void setSystemLatency(long system_latency);
     

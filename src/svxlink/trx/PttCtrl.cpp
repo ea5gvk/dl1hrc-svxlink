@@ -163,6 +163,12 @@ void PttCtrl::setLatency(int latency)
 {
   if (latency > 0)
   {
+    // if latency has been detetected a number of 
+    // null-samples will be inserted into the audio stream
+    // to delay the audio output of the other (maybe this) 
+    // Tx, e.g. INTERNAL_SAMPLE_RATE=16000 && latency = 34ms
+    // nulls = latency * INTERNAL_SAMPLE_RATE / 1000
+    // -> 544 = 34 * 16
     float nulls[latency];
     int a;
     for (a=0; a<latency; a++)

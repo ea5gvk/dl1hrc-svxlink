@@ -115,7 +115,7 @@ using namespace Async;
  ****************************************************************************/
 
 MultiTx::MultiTx(Config& cfg, const string& name)
-  : cfg(cfg), m_name(name), splitter(0)
+  : cfg(cfg), m_name(name), splitter(0), system_latency(0)
 {
   
 } /* MultiTx::MultiTx */
@@ -181,6 +181,14 @@ bool MultiTx::initialize(void)
   }
   
   setHandler(splitter);
+  
+  string value;
+  if (cfg.getValue(m_name, "SIMULCAST", value))
+  {  
+     // enable simulcast operation
+    system_latency = 10;  
+    setSystemLatency(system_latency);  
+  }
   
   return true;
   
@@ -277,6 +285,9 @@ void MultiTx::onLatencyChanged(long latency)
 {
   if (latency > system_latency)
   {
+    // safe the highest latency as system_latency
+    // inform all connected clients about the change
+    system_latency = latency;  
     setSystemLatency(latency);
   }
 } /* MultiTx::onLatencyChanged */

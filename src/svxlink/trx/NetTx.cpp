@@ -122,7 +122,8 @@ using namespace NetTrxMsg;
 NetTx::NetTx(Config &cfg, const string& name)
   : cfg(cfg), name(name), tcp_con(0), is_transmitting(false),
     mode(Tx::TX_OFF), ctcss_enable(false), pacer(0), is_connected(false),
-    pending_flush(false), unflushed_samples(false), audio_enc(0)
+    pending_flush(false), unflushed_samples(false), audio_enc(0), 
+    simulcast(false)
 {
 } /* NetTx::NetTx */
 
@@ -253,6 +254,7 @@ void NetTx::setSystemLatency(long system_latency)
 {
   MsgSystemLatency *msg = new MsgSystemLatency(system_latency);
   sendMsg(msg);
+  simulcast = true;
 } /* NetTx::setSystemLatency */
 
 
@@ -377,9 +379,6 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
 {
   pending_flush = false;
   unflushed_samples = true;
-  struct timeval now;
-  gettimeofday(&now, NULL);
-  long time_of_sending = now.tv_sec*1000000 + now.tv_usec;
   
   if (is_connected)
   {
@@ -388,8 +387,19 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
     {
       const int bufsize = MsgTimedAudio::BUFSIZE;
       int len = min(size, bufsize);
-      MsgTimedAudio *msg = new MsgTimedAudio(ptr, time_of_sending, len);
-      sendMsg(msg);
+      if (simulcast)
+      {
+        struct timeval now;
+        gettimeofday(&now, NULL);
+        long time_of_sending = now.tv_sec*1000000 + now.tv_usec;
+        MsgTimedAudio *msg = new MsgTimedAudio(ptr, time_of_sending, len);
+        sendMsg(msg);
+      }
+      else
+      {
+        MsgAudio *msg = new MsgAudio(ptr, len);
+        sendMsg(msg);
+      }
       size -= len;
       ptr += len;
     }

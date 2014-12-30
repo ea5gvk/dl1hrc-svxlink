@@ -189,7 +189,8 @@ class LocalTx : public Tx
     void setTransmittedSignalStrength(float siglev);
     
     /**
-     *
+     * @brief
+     * @param
      *
      */
     void setSystemLatency(long latency);
