@@ -36,6 +36,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cassert>
 #include <cstring>
 #include <cstdlib>
+#include <sys/time.h>
 
 
 /****************************************************************************
@@ -346,6 +347,8 @@ void NetTx::handleMsg(Msg *msg)
     
     case MsgSystemLatency::TYPE:
     {
+      // got message from remotetrx that the local_latency of the
+      // network-TX was changeing
       MsgSystemLatency *latency_msg 
           = reinterpret_cast<MsgSystemLatency*>(msg);
       own_latency = latency_msg->getLatency();
@@ -374,15 +377,18 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
 {
   pending_flush = false;
   unflushed_samples = true;
+  struct timeval now;
+  gettimeofday(&now, NULL);
+  long time_of_sending = now.tv_sec*1000000 + now.tv_usec;
   
   if (is_connected)
   {
     const char *ptr = reinterpret_cast<const char *>(buf);
     while (size > 0)
     {
-      const int bufsize = MsgAudio::BUFSIZE;
+      const int bufsize = MsgTimedAudio::BUFSIZE;
       int len = min(size, bufsize);
-      MsgAudio *msg = new MsgAudio(ptr, len);
+      MsgTimedAudio *msg = new MsgTimedAudio(ptr, time_of_sending, len);
       sendMsg(msg);
       size -= len;
       ptr += len;
