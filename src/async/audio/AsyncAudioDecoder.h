@@ -169,6 +169,8 @@ class AudioDecoder : public AudioSource, public sigc::trackable
      */
     sigc::signal<void> allEncodedSamplesFlushed;
     
+    virtual void setLatency(long latency);
+    
 
   protected:
     /**

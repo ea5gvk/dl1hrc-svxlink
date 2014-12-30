@@ -314,6 +314,7 @@ class AudioIO : public Async::AudioSource, public Async::AudioSink
      * This function is normally only called from a connected sink object.
      */
     void allSamplesFlushed(void) {}
+    
 
 #if 0
     /**

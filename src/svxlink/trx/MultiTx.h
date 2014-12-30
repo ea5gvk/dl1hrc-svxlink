@@ -176,6 +176,12 @@ class MultiTx : public Tx
      */
     virtual void setTransmittedSignalStrength(float siglev);
     
+    /**
+     *
+     *
+     */
+    virtual void setSystemLatency(long system_latency);
+    
   protected:
     
   private:
@@ -183,10 +189,12 @@ class MultiTx : public Tx
     std::string       	  m_name;
     std::list<Tx *>   	  txs;
     Async::AudioSplitter  *splitter;
+    long                  system_latency;
     
     MultiTx(const MultiTx&);
     MultiTx& operator=(const MultiTx&);
     void onTransmitterStateChange(bool is_transmitting);
+    void onLatencyChanged(long latency);
     
 };  /* class MultiTx */
 

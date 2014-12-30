@@ -179,6 +179,13 @@ class Tx : public sigc::trackable, public Async::AudioSink
     virtual void setTransmittedSignalStrength(float siglev) {}
     
     /**
+     *
+     *
+     *
+     */
+    virtual void setSystemLatency(long system_latency) {}
+    
+    /**
      * @brief 	This signal is emitted when the tx timeout timer expires
      *
      * This signal is emitted when the transmitter have been transmitting
@@ -194,6 +201,12 @@ class Tx : public sigc::trackable, public Async::AudioSink
      *          is transmitting or else \em false.
      */
     sigc::signal<void, bool> transmitterStateChange;
+    
+    /**
+     *
+     *
+     */
+    sigc::signal<void, long> latencyChanged;
     
 };  /* class Tx */
 

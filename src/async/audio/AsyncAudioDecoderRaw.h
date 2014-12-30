@@ -140,6 +140,16 @@ class AudioDecoderRaw : public AudioDecoder
       sinkWriteSamples(samples, count);
     }
     
+    virtual void setLatency(long latency)
+    {
+      float nulls[latency];
+      int a;
+      for (a=0; a<latency; a++)
+      {
+        nulls[a] = 0;
+      }
+      sinkWriteSamples(nulls, a);
+    }
 
   protected:
     

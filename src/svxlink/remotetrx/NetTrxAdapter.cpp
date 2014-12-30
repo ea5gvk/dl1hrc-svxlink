@@ -287,6 +287,7 @@ class TxAdapter : public Tx, public AudioSource
     
     signal<void, bool> sigTransmit;
     signal<void, char, int> sendDtmfDigit;
+  //  signal<void, long> latencyChanged;
     
     
     

@@ -148,6 +148,17 @@ void AudioDecoderGsm::writeEncodedSamples(void *buf, int size)
 } /* AudioDecoderGsm::writeEncodedSamples */
 
 
+void AudioDecoderGsm::setLatency(int latency)
+{
+  float nulls[latency];
+  int a;
+  for (a=0; a<latency; a++)
+  {
+    nulls[a] = 0;
+  }
+  sinkWriteSamples(nulls, a);    
+} /* AudioDecoderGsm::setLatency */
+
 
 /****************************************************************************
  *

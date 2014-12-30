@@ -283,6 +283,7 @@ class AudioDevice : public sigc::trackable
     const std::string& devName(void) const { return dev_name; }
     
     
+    
   protected:
     static int	      	sample_rate;
     static int	      	block_size_hint;

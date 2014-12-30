@@ -459,7 +459,32 @@ class MsgAudio : public Msg
 }; /* MsgAudio */
 
 
-
+class MsgTimedAudio : public Msg
+{
+  public:
+    static const unsigned TYPE = 103;
+    static const int BUFSIZE = sizeof(float) * 512;
+    MsgTimedAudio(const void *buf, long system_latency, int size)
+      : Msg(TYPE, sizeof(MsgAudio) - (BUFSIZE - size)), m_time(system_latency)
+    {
+      assert(size <= BUFSIZE);
+      memcpy(m_buf, buf, size);
+      m_size = size;
+    }
+    void *buf(void)
+    {
+      return m_buf;
+    }
+    int size(void) const { return m_size; }
+    
+    long sendtime(void) const { return m_time; }
+  
+  private:
+    int     m_size;
+    uint8_t m_buf[BUFSIZE];
+    long  m_time;
+    
+}; /* MsgAudio */
 
 /******************************** RX Messages ********************************/
 
@@ -688,6 +713,19 @@ class MsgAllSamplesFlushed : public Msg
       : Msg(TYPE, sizeof(MsgAllSamplesFlushed)) {}
 }; /* MsgTxTimeout */
 
+
+class MsgSystemLatency : public Msg
+{
+  public:
+    static const unsigned TYPE = 353;
+    MsgSystemLatency(long latency)
+      : Msg(TYPE, sizeof(MsgSystemLatency)), m_latency(latency) {}
+    long getLatency(void) { return m_latency; }
+  
+  private:
+    long m_latency;
+  
+}; /* MsgSystemLatency */
 
 #pragma pack(pop)
 

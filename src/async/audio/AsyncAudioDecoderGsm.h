@@ -145,6 +145,11 @@ class AudioDecoderGsm : public AudioDecoder
      */
     virtual void writeEncodedSamples(void *buf, int size);
     
+    /**
+     *
+     *
+     */
+    virtual void setLatency(int latency);  
 
   protected:
     

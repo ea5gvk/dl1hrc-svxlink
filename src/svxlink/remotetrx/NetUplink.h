@@ -157,6 +157,12 @@ class NetUplink : public Uplink
      */
     void setAuthKey(const std::string &key) { auth_key = key; }
     
+    /**
+     * @brief
+     * @param
+     */
+    //sigc::signal<void, long> latencyChanged;
+    
 
   protected:
     
@@ -191,6 +197,8 @@ class NetUplink : public Uplink
     bool		    tx_muted;
     bool                    fallback_enabled;
     Tx::TxCtrlMode	    tx_ctrl_mode;
+    long                    system_latency; 
+    long                    local_latency; 
     
     NetUplink(const NetUplink&);
     NetUplink& operator=(const NetUplink&);

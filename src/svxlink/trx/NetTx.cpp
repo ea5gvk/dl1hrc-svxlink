@@ -248,6 +248,12 @@ void NetTx::sendDtmf(const std::string& digits)
 } /* NetTx::sendDtmf */
 
 
+void NetTx::setSystemLatency(long system_latency)
+{
+  MsgSystemLatency *msg = new MsgSystemLatency(system_latency);
+  sendMsg(msg);
+} /* NetTx::setSystemLatency */
+
 
 /****************************************************************************
  *
@@ -336,6 +342,15 @@ void NetTx::handleMsg(Msg *msg)
     {
       allEncodedSamplesFlushed();
       break;
+    }
+    
+    case MsgSystemLatency::TYPE:
+    {
+      MsgSystemLatency *latency_msg 
+          = reinterpret_cast<MsgSystemLatency*>(msg);
+      own_latency = latency_msg->getLatency();
+      latencyChanged(own_latency); 
+      break; 
     }
     
     /*

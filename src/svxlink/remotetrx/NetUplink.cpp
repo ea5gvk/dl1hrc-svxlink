@@ -34,6 +34,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <iostream>
 #include <cstring>
+#include <sigc++/sigc++.h>
 
 
 /****************************************************************************
@@ -582,6 +583,31 @@ void NetUplink::handleMsg(Msg *msg)
       break;
     }
     
+    case MsgTimedAudio::TYPE:
+    {
+      if (!tx_muted && (audio_dec != 0))
+      {
+        MsgTimedAudio *audio_msg = reinterpret_cast<MsgTimedAudio*>(msg);
+        // calculate the local_latency
+        local_latency = audio_msg->sendtime() 
+            - (last_msg_timestamp.tv_sec*1000000 + last_msg_timestamp.tv_usec);
+        if (local_latency > system_latency)
+        {
+          system_latency = local_latency;
+          // send info abt longer latency to the master
+          MsgSystemLatency *system_latency_msg = new MsgSystemLatency(system_latency);
+          sendMsg(system_latency_msg);
+        }
+        else
+        {
+          int diff = (system_latency - local_latency) * INTERNAL_SAMPLE_RATE / 1000000;
+          audio_dec->setLatency(diff);
+        }
+        audio_dec->writeEncodedSamples(audio_msg->buf(), audio_msg->size());        
+      }
+      break;
+    }
+    
     case MsgFlush::TYPE:
     {
       if (audio_dec != 0)
@@ -590,6 +616,24 @@ void NetUplink::handleMsg(Msg *msg)
       }
       break;
     } 
+    
+    case MsgSystemLatency::TYPE:
+    {
+      MsgSystemLatency *latency_msg = reinterpret_cast<MsgSystemLatency*>(msg);
+      system_latency = latency_msg->getLatency();
+      long diff = system_latency - local_latency;
+
+      if (diff < 0)
+      {
+        MsgSystemLatency *system_latency_msg = new MsgSystemLatency(local_latency);
+        sendMsg(system_latency_msg);
+        break;    
+      }
+      local_latency += (diff - local_latency);
+
+      audio_dec->setLatency(local_latency);
+      break;
+    }
     
     default:
       cerr << "*** ERROR: Unknown TCP message received in NetUplink "

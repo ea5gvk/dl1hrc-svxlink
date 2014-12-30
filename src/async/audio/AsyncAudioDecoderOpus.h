@@ -166,7 +166,12 @@ class AudioDecoderOpus : public AudioDecoder
      * @param 	size The size of the buffer
      */
     virtual void writeEncodedSamples(void *buf, int size);
-    
+
+    /**
+     * @brief 	
+     * @param 	
+     */    
+    void setLatency(int latency);
 
   protected:
     

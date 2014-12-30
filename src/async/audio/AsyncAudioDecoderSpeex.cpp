@@ -197,6 +197,17 @@ void AudioDecoderSpeex::writeEncodedSamples(void *buf, int size)
 } /* AudioDecoderSpeex::writeEncodedSamples */
 
 
+void AudioDecoderSpeex::setLatency(int latency)
+{
+  float nulls[latency];
+  int a;
+  for (a=0; a<latency; a++)
+  {
+    nulls[a] = 0;
+  }
+  sinkWriteSamples(nulls, a);    
+} /* AudioDecoderSpeex::setLatency */
+
 
 /****************************************************************************
  *

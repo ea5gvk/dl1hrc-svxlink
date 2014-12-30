@@ -176,6 +176,10 @@ void AudioDecoder::resumeOutput(void)
 #endif
 
 
+void AudioDecoder::setLatency(long latency)
+{
+    
+} /* AudioDecoder::setLatency */
 
 /****************************************************************************
  *

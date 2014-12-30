@@ -188,6 +188,13 @@ class LocalTx : public Tx
      */
     void setTransmittedSignalStrength(float siglev);
     
+    /**
+     *
+     *
+     */
+    void setSystemLatency(long latency);
+    
+    
   private:
     std::string       	    name;
     Async::Config     	    &cfg;
@@ -209,6 +216,8 @@ class LocalTx : public Tx
     std::vector<int>        tone_siglev_map;
     Async::Timer            *ptt_hangtimer;
     Ptt                     *ptt;
+    long                    own_latency;
+    long                    own_diff;
     
     void txTimeoutOccured(Async::Timer *t);
     bool setPtt(bool tx, bool with_hangtime=false);

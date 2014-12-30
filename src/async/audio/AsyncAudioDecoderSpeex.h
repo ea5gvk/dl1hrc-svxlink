@@ -167,6 +167,11 @@ class AudioDecoderSpeex : public AudioDecoder
      */
     virtual void writeEncodedSamples(void *buf, int size);
     
+    /**
+     *
+     *
+     */
+    void setLatency(int latency);
 
   protected:
     

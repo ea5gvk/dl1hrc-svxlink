@@ -140,12 +140,11 @@ int PttCtrl::writeSamples(const float *samples, int count)
   {
     transmit(true);
   }
-      
+  
   if (fifo != 0)
   {
     return fifo->writeSamples(samples, count);
   }
-      
   return valve.writeSamples(samples, count);
 }
 
@@ -159,6 +158,22 @@ void PttCtrl::allSamplesFlushed(void)
   }
 }
 
+
+void PttCtrl::setLatency(int latency)
+{
+  if (latency > 0)
+  {
+    float nulls[latency];
+    int a;
+    for (a=0; a<latency; a++)
+    {
+      nulls[a] = 0;
+    }
+    writeSamples(nulls, a);
+  }
+  
+  latency_buffer = latency;
+} /* PttCtrl::setLatency */
 
 
 /****************************************************************************

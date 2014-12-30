@@ -136,6 +136,12 @@ class AudioDecoderNull : public AudioDecoder
      * This NULL decoder will just throw away written samples.
      */
     virtual void writeEncodedSamples(void *buf, int size) {}
+    
+    /**
+     *
+     */
+    virtual void setLatency(int latency) {}
+    
 
   protected:
     

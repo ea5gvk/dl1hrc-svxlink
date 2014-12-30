@@ -166,6 +166,7 @@ bool MultiTx::initialize(void)
       tx->txTimeout.connect(txTimeout.make_slot());
       tx->transmitterStateChange.connect(
       	      mem_fun(*this, &MultiTx::onTransmitterStateChange));
+      tx->latencyChanged.connect(mem_fun(*this, &MultiTx::onLatencyChanged));
       
       splitter->addSink(tx);
       
@@ -240,6 +241,14 @@ void MultiTx::setTransmittedSignalStrength(float siglev)
 } /* MultiTx::setTransmittedSignalStrength */
 
 
+void MultiTx::setSystemLatency(long system_latency)
+{
+  list<Tx *>::iterator it;
+  for (it=txs.begin(); it!=txs.end(); ++it)
+  {
+    (*it)->setSystemLatency(system_latency);
+  }
+} /* MultiTx::setSystemLatency */
 
 /****************************************************************************
  *
@@ -263,6 +272,14 @@ void MultiTx::onTransmitterStateChange(bool is_transmitting)
   }
 } /* MultiTx::onTransmitterStateChange */
 
+
+void MultiTx::onLatencyChanged(long latency)
+{
+  if (latency > system_latency)
+  {
+    setSystemLatency(latency);
+  }
+} /* MultiTx::onLatencyChanged */
 
 
 /*
