@@ -596,17 +596,23 @@ void LocalTx::setTransmittedSignalStrength(float siglev)
 
 void LocalTx::setSystemLatency(long system_latency)
 {
-  // calculate the number of sampels to include into the
-  // audiostream to create a delay  
-  own_diff = static_cast<int>((system_latency - own_latency) 
-                                * INTERNAL_SAMPLE_RATE / 1000000);
-  
-  ptt_ctrl->setLatency(own_diff);
+
   if (own_latency > system_latency)
   {
-    latencyChanged(own_latency);   
+    own_latency = system_latency;
+    latencyChanged(own_latency);
   }
 
+  int delay = static_cast<int>(system_latency - own_latency) - own_diff;
+
+  // calculate the number of sampels to include into the
+  // audiostream to create a delay 
+  int tmp_diff = static_cast<int>(delay * INTERNAL_SAMPLE_RATE / 1000000);
+
+  ptt_ctrl->setLatency(tmp_diff);
+  
+  own_diff = delay;
+  
 } /* LocalTx::setSystemLatency */
 
 

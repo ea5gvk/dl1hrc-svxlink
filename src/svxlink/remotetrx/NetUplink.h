@@ -198,7 +198,8 @@ class NetUplink : public Uplink
     bool                    fallback_enabled;
     Tx::TxCtrlMode	    tx_ctrl_mode;
     long                    system_latency; 
-    long                    local_latency; 
+    long                    local_latency;
+    int                      own_diff;
     
     NetUplink(const NetUplink&);
     NetUplink& operator=(const NetUplink&);

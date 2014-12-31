@@ -621,17 +621,19 @@ void NetUplink::handleMsg(Msg *msg)
     {
       MsgSystemLatency *latency_msg = reinterpret_cast<MsgSystemLatency*>(msg);
       system_latency = latency_msg->getLatency();
-      long diff = system_latency - local_latency;
+      
+      int delay = static_cast<int>(system_latency - local_latency) - own_diff;
 
-      if (diff < 0)
+      if (delay < 0)
       {
         MsgSystemLatency *system_latency_msg = new MsgSystemLatency(local_latency);
         sendMsg(system_latency_msg);
         break;    
       }
-      local_latency += (diff - local_latency);
-
-      audio_dec->setLatency(local_latency);
+           
+      int tmp_diff = static_cast<int>(delay * INTERNAL_SAMPLE_RATE / 1000000);
+      audio_dec->setLatency(tmp_diff);
+      own_diff = delay;
       break;
     }
     
