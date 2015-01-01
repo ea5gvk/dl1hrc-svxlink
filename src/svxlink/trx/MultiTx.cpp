@@ -115,7 +115,7 @@ using namespace Async;
  ****************************************************************************/
 
 MultiTx::MultiTx(Config& cfg, const string& name)
-  : cfg(cfg), m_name(name), splitter(0), system_latency(0)
+  : cfg(cfg), m_name(name), splitter(0), system_latency(0), next_latency(0)
 {
   
 } /* MultiTx::MultiTx */
@@ -171,6 +171,7 @@ bool MultiTx::initialize(void)
       splitter->addSink(tx);
       
       txs.push_back(tx);
+
     }
     if (comma == transmitters.end())
     {
@@ -185,10 +186,11 @@ bool MultiTx::initialize(void)
   string value;
   if (cfg.getValue(m_name, "SIMULCAST", value))
   {  
-     // enable simulcast operation
+    // enable simulcast operation
     system_latency = 10;  
-    setSystemLatency(system_latency);  
+    setSystemLatency(system_latency);
   }
+
   
   return true;
   
@@ -278,18 +280,38 @@ void MultiTx::onTransmitterStateChange(bool is_transmitting)
   {
     transmitterStateChange(is_transmitting);
   }
+  setSystemLatency(next_latency);
+  system_latency = next_latency;
 } /* MultiTx::onTransmitterStateChange */
 
 
-void MultiTx::onLatencyChanged(long latency)
+void MultiTx::onLatencyChanged(long latency, Tx *tx)
 {
   if (latency > system_latency)
   {
     // safe the highest latency as system_latency
     // inform all connected clients about the change
-    system_latency = latency;  
+    system_latency = latency;
     setSystemLatency(latency);
+    maxlatencyTx = tx;
   }
+
+  tx_latencystore[tx] = latency;  
+ 
+  // Tx with highest latency has reduced it's latency, so we can
+  // reduce the system_latency to the second one
+  if (tx == maxlatencyTx && latency < system_latency)
+  {
+    list<Tx *>::iterator it;
+    for (it=txs.begin(); it!=txs.end(); ++it)
+    {
+      if (tx_latencystore[tx] > next_latency)
+      {
+        next_latency = tx_latencystore[tx];
+      }
+    }
+  }
+  
 } /* MultiTx::onLatencyChanged */
 
 

@@ -206,7 +206,7 @@ class Tx : public sigc::trackable, public Async::AudioSink
      *
      *
      */
-    sigc::signal<void, long> latencyChanged;
+    sigc::signal<void, long, Tx *> latencyChanged;
     
 };  /* class Tx */
 

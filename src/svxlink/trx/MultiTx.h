@@ -190,11 +190,14 @@ class MultiTx : public Tx
     std::list<Tx *>   	  txs;
     Async::AudioSplitter  *splitter;
     long                  system_latency;
+    std::map<Tx *,long>  tx_latencystore;
+    Tx                    *maxlatencyTx;
+    long                 next_latency;
     
     MultiTx(const MultiTx&);
     MultiTx& operator=(const MultiTx&);
     void onTransmitterStateChange(bool is_transmitting);
-    void onLatencyChanged(long latency);
+    void onLatencyChanged(long latency, Tx *tx);
     
 };  /* class MultiTx */
 

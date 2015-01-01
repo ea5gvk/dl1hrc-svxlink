@@ -354,7 +354,7 @@ void NetTx::handleMsg(Msg *msg)
       MsgSystemLatency *latency_msg 
           = reinterpret_cast<MsgSystemLatency*>(msg);
       own_latency = latency_msg->getLatency();
-      latencyChanged(own_latency); 
+      latencyChanged(own_latency, this); 
       break; 
     }
     
