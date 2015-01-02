@@ -255,6 +255,7 @@ void NetTx::setSystemLatency(long system_latency)
   MsgSystemLatency *msg = new MsgSystemLatency(system_latency);
   sendMsg(msg);
   simulcast = true;
+  cout << "**** setting simulcast" << endl;
 } /* NetTx::setSystemLatency */
 
 
@@ -354,7 +355,8 @@ void NetTx::handleMsg(Msg *msg)
       MsgSystemLatency *latency_msg 
           = reinterpret_cast<MsgSystemLatency*>(msg);
       own_latency = latency_msg->getLatency();
-      latencyChanged(own_latency, this); 
+      latencyChanged(own_latency, this);
+      cout << "got latency-info: " << own_latency << endl;
       break; 
     }
     
@@ -393,6 +395,7 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
         gettimeofday(&now, NULL);
         MsgTimedAudio *msg = new MsgTimedAudio(ptr, now, len);
         sendMsg(msg);
+        cout << "own_time: " << now.tv_sec << "sec " << now.tv_usec << endl;
       }
       else
       {

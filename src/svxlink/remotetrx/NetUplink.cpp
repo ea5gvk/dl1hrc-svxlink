@@ -591,8 +591,11 @@ void NetUplink::handleMsg(Msg *msg)
         // calculate the local_latency
         struct timeval difftime;
         struct timeval stime = audio_msg->sendtime();
+        cout << "time from master: " << stime.tv_sec << "sec " << stime.tv_usec << "usec | own_time: "
+             << last_msg_timestamp.tv_sec << "sec " << last_msg_timestamp.tv_usec << "usec";
         timersub(&stime, &last_msg_timestamp, &difftime);
         local_latency = difftime.tv_sec*1000000 + difftime.tv_usec;
+        cout << ", local_latency: " << local_latency << endl;
         if (local_latency > system_latency)
         {
           system_latency = local_latency;
