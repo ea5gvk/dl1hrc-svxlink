@@ -391,8 +391,7 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
       {
         struct timeval now;
         gettimeofday(&now, NULL);
-        long time_of_sending = now.tv_sec*1000000 + now.tv_usec;
-        MsgTimedAudio *msg = new MsgTimedAudio(ptr, time_of_sending, len);
+        MsgTimedAudio *msg = new MsgTimedAudio(ptr, now, len);
         sendMsg(msg);
       }
       else

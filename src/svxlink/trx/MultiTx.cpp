@@ -280,7 +280,9 @@ void MultiTx::onTransmitterStateChange(bool is_transmitting)
   {
     transmitterStateChange(is_transmitting);
   }
+  // (re)setting the latency if the transmitter state is changeing
   setSystemLatency(next_latency);
+  cout << "resetting system_latency: " << system_latency << endl;
   system_latency = next_latency;
 } /* MultiTx::onTransmitterStateChange */
 
@@ -294,9 +296,10 @@ void MultiTx::onLatencyChanged(long latency, Tx *tx)
     system_latency = latency;
     setSystemLatency(latency);
     maxlatencyTx = tx;
+    cout << "      new system_latency: " << system_latency << endl;
   }
 
-  tx_latencystore[tx] = latency;  
+  tx_latencystore[tx] = latency;
  
   // Tx with highest latency has reduced it's latency, so we can
   // reduce the system_latency to the second one

@@ -464,8 +464,8 @@ class MsgTimedAudio : public Msg
   public:
     static const unsigned TYPE = 103;
     static const int BUFSIZE = sizeof(float) * 512;
-    MsgTimedAudio(const void *buf, long system_latency, int size)
-      : Msg(TYPE, sizeof(MsgAudio) - (BUFSIZE - size)), m_time(system_latency)
+    MsgTimedAudio(const void *buf, struct timeval send_time, int size)
+      : Msg(TYPE, sizeof(MsgAudio) - (BUFSIZE - size)), m_time(send_time)
     {
       assert(size <= BUFSIZE);
       memcpy(m_buf, buf, size);
@@ -477,12 +477,12 @@ class MsgTimedAudio : public Msg
     }
     int size(void) const { return m_size; }
     
-    long sendtime(void) const { return m_time; }
+    struct timeval sendtime(void) const { return m_time; }
   
   private:
     int     m_size;
     uint8_t m_buf[BUFSIZE];
-    long  m_time;
+    struct timeval m_time;
     
 }; /* MsgAudio */
 
