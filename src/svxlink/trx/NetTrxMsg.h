@@ -459,32 +459,22 @@ class MsgAudio : public Msg
 }; /* MsgAudio */
 
 
-class MsgTimedAudio : public Msg
+class MsgTime : public Msg
 {
   public:
-    static const unsigned TYPE = 103;
-    static const int BUFSIZE = sizeof(float) * 512;
-    MsgTimedAudio(const void *buf, struct timeval send_time, int size)
-      : Msg(TYPE, sizeof(MsgAudio) - (BUFSIZE - size)), m_time(send_time)
-    {
-      assert(size <= BUFSIZE);
-      memcpy(m_buf, buf, size);
-      m_size = size;
-    }
-    void *buf(void)
-    {
-      return m_buf;
-    }
-    int size(void) const { return m_size; }
+    static const unsigned TYPE = 104;
     
-    struct timeval sendtime(void) const { return m_time; }
-  
+    MsgTime(unsigned seconds, unsigned useconds)
+      : Msg(TYPE, sizeof(MsgTime)), m_sec(seconds), m_usec(useconds) {}
+      
+    unsigned seconds(void) const { return m_sec; }
+    unsigned useconds(void) const { return m_usec; }
+    
   private:
-    int     m_size;
-    uint8_t m_buf[BUFSIZE];
-    struct timeval m_time;
-    
-}; /* MsgAudio */
+    unsigned m_sec;
+    unsigned m_usec;
+}; /* MsgTime */
+
 
 /******************************** RX Messages ********************************/
 
@@ -718,12 +708,12 @@ class MsgSystemLatency : public Msg
 {
   public:
     static const unsigned TYPE = 353;
-    MsgSystemLatency(long latency)
+    MsgSystemLatency(unsigned latency)
       : Msg(TYPE, sizeof(MsgSystemLatency)), m_latency(latency) {}
-    long getLatency(void) { return m_latency; }
+    unsigned getLatency(void) { return m_latency; }
   
   private:
-    long m_latency;
+    unsigned m_latency;
   
 }; /* MsgSystemLatency */
 

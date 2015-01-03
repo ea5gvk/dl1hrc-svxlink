@@ -387,24 +387,17 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
     const char *ptr = reinterpret_cast<const char *>(buf);
     while (size > 0)
     {
-      const int bufsize = MsgTimedAudio::BUFSIZE;
+      const int bufsize = MsgAudio::BUFSIZE;
       int len = min(size, bufsize);
-      if (simulcast)
-      {
-        struct timeval now;
-        gettimeofday(&now, NULL);
-        MsgTimedAudio *msg = new MsgTimedAudio(ptr, now, len);
-        sendMsg(msg);
-        cout << "own_time: " << now.tv_sec << "sec " << now.tv_usec << endl;
-      }
-      else
-      {
-        MsgAudio *msg = new MsgAudio(ptr, len);
-        sendMsg(msg);
-      }
+      MsgAudio *msg = new MsgAudio(ptr, len);
+      sendMsg(msg);
       size -= len;
       ptr += len;
     }
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    MsgTime *time = new MsgTime(now.tv_sec, now.tv_usec);
+    sendMsg(time);
   }
   else
   {

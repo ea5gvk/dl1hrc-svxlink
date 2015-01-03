@@ -583,34 +583,29 @@ void NetUplink::handleMsg(Msg *msg)
       break;
     }
     
-    case MsgTimedAudio::TYPE:
+    case MsgTime::TYPE:
     {
-      if (!tx_muted && (audio_dec != 0))
+      MsgTime *time_msg = reinterpret_cast<MsgTime*>(msg);
+      unsigned seconds = time_msg->seconds();
+      unsigned useconds = time_msg->useconds();
+      // calculate the latency between both stations
+      struct timeval now;
+      gettimeofday(&now, NULL);
+      local_latency = (now.tv_sec - seconds) * 1000000 
+                              + (now.tv_usec - useconds);
+      if (local_latency < 0)
       {
-        MsgTimedAudio *audio_msg = reinterpret_cast<MsgTimedAudio*>(msg);
-        // calculate the local_latency
-        struct timeval difftime;
-        struct timeval stime = audio_msg->sendtime();
-        cout << "time from master: " << stime.tv_sec << "sec " << stime.tv_usec << "usec | own_time: "
-             << last_msg_timestamp.tv_sec << "sec " << last_msg_timestamp.tv_usec << "usec";
-        timersub(&stime, &last_msg_timestamp, &difftime);
-        local_latency = difftime.tv_sec*1000000 + difftime.tv_usec;
-        cout << ", local_latency: " << local_latency << endl;
-        if (local_latency > system_latency)
-        {
-          system_latency = local_latency;
-          // send info abt longer latency to the master
-          MsgSystemLatency *system_latency_msg = new MsgSystemLatency(system_latency);
-          sendMsg(system_latency_msg);
-        }
-        else
-        {
-          int diff = (system_latency - local_latency) * INTERNAL_SAMPLE_RATE / 1000000;
-          audio_dec->setLatency(diff);
-        }
-        audio_dec->writeEncodedSamples(audio_msg->buf(), audio_msg->size());        
+        cout << "*** ERROR: latency is negative? Check your clocks!" << endl;  
+        break; 
       }
-      break;
+      if (local_latency > system_latency)
+      {
+        system_latency = local_latency;
+        MsgSystemLatency *system_latency_msg = new MsgSystemLatency(system_latency);
+        sendMsg(system_latency_msg);
+      }
+      int diff = (system_latency - local_latency) * INTERNAL_SAMPLE_RATE / 1000000;
+      audio_dec->setLatency(diff);
     }
     
     case MsgFlush::TYPE:
