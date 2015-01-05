@@ -356,7 +356,7 @@ void NetTx::handleMsg(Msg *msg)
           = reinterpret_cast<MsgSystemLatency*>(msg);
       own_latency = latency_msg->getLatency();
       latencyChanged(own_latency, this);
-      cout << "got latency-info: " << own_latency << endl;
+      cout << "latency (remotetx) " << own_latency << " ms" << endl;
       break; 
     }
     

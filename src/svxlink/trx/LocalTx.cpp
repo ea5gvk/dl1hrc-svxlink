@@ -232,8 +232,8 @@ LocalTx::LocalTx(Config& cfg, const string& name)
   : name(name), cfg(cfg), audio_io(0), is_transmitting(false), txtot(0),
     tx_timeout_occured(false), tx_timeout(0), sine_gen(0), ctcss_enable(false),
     dtmf_encoder(0), selector(0), dtmf_valve(0), input_handler(0),
-    audio_valve(0), siglev_sine_gen(0), ptt_hangtimer(0), ptt(0), own_latency(0),
-    own_diff(0)
+    audio_valve(0), siglev_sine_gen(0), ptt_hangtimer(0), ptt(0), local_latency(0),
+    last_diff(0)
 {
 
 } /* LocalTx::LocalTx */
@@ -598,22 +598,24 @@ void LocalTx::setTransmittedSignalStrength(float siglev)
 void LocalTx::setSystemLatency(long system_latency)
 {
 
-  if (own_latency > system_latency)
+  int delay = static_cast<int>(system_latency - local_latency);
+  if (delay < 0)
   {
-    own_latency = system_latency;
-    latencyChanged(own_latency, this);
+    system_latency = local_latency;
+    latencyChanged(local_latency, this);
+    delay = -delay;
   }
-
-  int delay = static_cast<int>(system_latency - own_latency) - own_diff;
 
   // calculate the number of sampels to include into the
   // audiostream to create a delay 
-  int tmp_diff = static_cast<int>(delay * INTERNAL_SAMPLE_RATE / 1000000);
+  int tmp_diff = static_cast<int>(delay * INTERNAL_SAMPLE_RATE / 1000000) 
+                 - last_diff;
 
-  ptt_ctrl->setLatency(tmp_diff);
-  
-  own_diff = delay;
-  
+  if (tmp_diff > last_diff)
+  {
+    ptt_ctrl->setLatency(tmp_diff);
+    last_diff += tmp_diff;
+  } 
 } /* LocalTx::setSystemLatency */
 
 

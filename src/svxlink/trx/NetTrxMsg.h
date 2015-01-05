@@ -708,12 +708,12 @@ class MsgSystemLatency : public Msg
 {
   public:
     static const unsigned TYPE = 353;
-    MsgSystemLatency(unsigned latency)
+    MsgSystemLatency(long latency)
       : Msg(TYPE, sizeof(MsgSystemLatency)), m_latency(latency) {}
     unsigned getLatency(void) { return m_latency; }
   
   private:
-    unsigned m_latency;
+    long m_latency;
   
 }; /* MsgSystemLatency */
 

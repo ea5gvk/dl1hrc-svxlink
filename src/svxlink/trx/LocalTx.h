@@ -217,8 +217,8 @@ class LocalTx : public Tx
     std::vector<int>        tone_siglev_map;
     Async::Timer            *ptt_hangtimer;
     Ptt                     *ptt;
-    long                    own_latency;
-    long                    own_diff;
+    long                    local_latency;
+    int                     last_diff;
     
     void txTimeoutOccured(Async::Timer *t);
     bool setPtt(bool tx, bool with_hangtime=false);

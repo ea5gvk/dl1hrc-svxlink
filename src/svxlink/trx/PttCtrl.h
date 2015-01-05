@@ -154,8 +154,7 @@ class PttCtrl : public Async::AudioSink, public Async::AudioSource,
     int       	        tx_delay;
     Async::AudioFifo 	*fifo;
     Async::AudioValve	valve;
-    int latency_buffer;
-    float *nulls;
+    float               *nulls;
     
     void transmit(bool do_transmit);
     void txDelayExpired(Async::Timer *t);

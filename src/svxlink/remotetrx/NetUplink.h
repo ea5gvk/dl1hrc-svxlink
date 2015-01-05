@@ -199,7 +199,7 @@ class NetUplink : public Uplink
     Tx::TxCtrlMode	    tx_ctrl_mode;
     long                    system_latency; 
     long                    local_latency;
-    int                      own_diff;
+    int                     last_diff;
     
     NetUplink(const NetUplink&);
     NetUplink& operator=(const NetUplink&);

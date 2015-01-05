@@ -177,8 +177,6 @@ void PttCtrl::setLatency(int latency)
     }
     writeSamples(nulls, a);
   }
-  
-  latency_buffer = latency;
 } /* PttCtrl::setLatency */
 
 

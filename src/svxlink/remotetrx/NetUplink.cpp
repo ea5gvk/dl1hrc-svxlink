@@ -128,7 +128,7 @@ NetUplink::NetUplink(Config &cfg, const string &name, Rx *rx, Tx *tx,
     cfg(cfg), name(name), heartbeat_timer(0), audio_enc(0), audio_dec(0),
     loopback_con(0), rx_splitter(0), tx_selector(0), state(STATE_DISC),
     mute_tx_timer(0), tx_muted(false), fallback_enabled(false),
-    tx_ctrl_mode(Tx::TX_OFF)
+    tx_ctrl_mode(Tx::TX_OFF), system_latency(0), local_latency(0), last_diff(0)
 {
   heartbeat_timer = new Timer(10000);
   heartbeat_timer->setEnable(false);
@@ -595,17 +595,29 @@ void NetUplink::handleMsg(Msg *msg)
                               + (now.tv_usec - useconds);
       if (local_latency < 0)
       {
-        cout << "*** ERROR: latency is negative? Check your clocks!" << endl;  
+        cout << "*** ERROR: latency is negative (" << local_latency << 
+                  ")? Check your clocks!" << endl;  
         break; 
       }
+      
+      // local latency is higher than the others, inform the other clients
+      // about this!
       if (local_latency > system_latency)
       {
         system_latency = local_latency;
         MsgSystemLatency *system_latency_msg = new MsgSystemLatency(system_latency);
         sendMsg(system_latency_msg);
       }
-      int diff = (system_latency - local_latency) * INTERNAL_SAMPLE_RATE / 1000000;
-      audio_dec->setLatency(diff);
+      int tmp_diff = static_cast<int>((system_latency - local_latency) * INTERNAL_SAMPLE_RATE / 1000000) 
+                     - last_diff;
+      if (tmp_diff > last_diff)
+      {
+        audio_dec->setLatency(tmp_diff);
+        last_diff += tmp_diff;
+        cout << "increasing local samples " << tmp_diff 
+             << " -> diff samples: " << last_diff << endl;
+      }
+      break;
     }
     
     case MsgFlush::TYPE:
@@ -622,18 +634,28 @@ void NetUplink::handleMsg(Msg *msg)
       MsgSystemLatency *latency_msg = reinterpret_cast<MsgSystemLatency*>(msg);
       system_latency = latency_msg->getLatency();
       
-      int delay = static_cast<int>(system_latency - local_latency) - own_diff;
+       // delay = timedifference between system latency an local latency in ms
+      int delay = static_cast<int>(system_latency - local_latency);
 
+       // local latency is higher than the system's -> inform all others to 
+       // increase the ystem latency
       if (delay < 0)
       {
         MsgSystemLatency *system_latency_msg = new MsgSystemLatency(local_latency);
         sendMsg(system_latency_msg);
-        break;    
+        local_latency = system_latency;
+        delay = -delay;
       }
-           
-      int tmp_diff = static_cast<int>(delay * INTERNAL_SAMPLE_RATE / 1000000);
-      audio_dec->setLatency(tmp_diff);
-      own_diff = delay;
+
+      int tmp_diff = static_cast<int>(delay * INTERNAL_SAMPLE_RATE / 1000000) 
+                     - last_diff;
+      if (tmp_diff > last_diff)
+      {
+        audio_dec->setLatency(tmp_diff);  
+        last_diff += tmp_diff;
+        cout << "increasing local samples " << tmp_diff 
+             << " -> diff samples: " << last_diff << endl;
+      }
       break;
     }
     
