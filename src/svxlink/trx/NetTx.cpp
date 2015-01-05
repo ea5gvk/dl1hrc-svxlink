@@ -356,7 +356,8 @@ void NetTx::handleMsg(Msg *msg)
           = reinterpret_cast<MsgSystemLatency*>(msg);
       own_latency = latency_msg->getLatency();
       latencyChanged(own_latency, this);
-      cout << "latency (remotetx) " << own_latency << " ms" << endl;
+      cout << "latency (remotetx) " << own_latency/1000
+           << " usec" << endl;
       break; 
     }
     
@@ -384,6 +385,11 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
   
   if (is_connected)
   {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    MsgTime *time = new MsgTime(now.tv_sec, now.tv_usec);
+    sendMsg(time);
+    
     const char *ptr = reinterpret_cast<const char *>(buf);
     while (size > 0)
     {
@@ -394,10 +400,6 @@ void NetTx::writeEncodedSamples(const void *buf, int size)
       size -= len;
       ptr += len;
     }
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    MsgTime *time = new MsgTime(now.tv_sec, now.tv_usec);
-    sendMsg(time);
   }
   else
   {

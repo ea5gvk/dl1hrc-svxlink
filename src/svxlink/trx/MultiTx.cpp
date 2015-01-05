@@ -171,7 +171,6 @@ bool MultiTx::initialize(void)
       splitter->addSink(tx);
       
       txs.push_back(tx);
-
     }
     if (comma == transmitters.end())
     {
@@ -187,10 +186,9 @@ bool MultiTx::initialize(void)
   if (cfg.getValue(m_name, "SIMULCAST", value))
   {  
     // enable simulcast operation
-    system_latency = 10;  
+    system_latency = 10;
     setSystemLatency(system_latency);
   }
-
   
   return true;
   
@@ -282,8 +280,9 @@ void MultiTx::onTransmitterStateChange(bool is_transmitting)
   }
   // (re)setting the latency if the transmitter state is changeing
   setSystemLatency(next_latency);
-  cout << "resetting system_latency: " << system_latency << endl;
   system_latency = next_latency;
+  cout << "*** resetting system_latency to " << system_latency/1000
+       << "msec." << endl;
 } /* MultiTx::onTransmitterStateChange */
 
 
@@ -296,7 +295,8 @@ void MultiTx::onLatencyChanged(long latency, Tx *tx)
     system_latency = latency;
     setSystemLatency(latency);
     maxlatencyTx = tx;
-    cout << "      new system_latency: " << system_latency << endl;
+    cout << "     --- received new system_latency " << system_latency/1000 
+         << "msec." << endl;
   }
 
   tx_latencystore[tx] = latency;

@@ -614,8 +614,9 @@ void NetUplink::handleMsg(Msg *msg)
       {
         audio_dec->setLatency(tmp_diff);
         last_diff += tmp_diff;
-        cout << "increasing local samples " << tmp_diff 
-             << " -> diff samples: " << last_diff << endl;
+        cout << "*** increasing local samples " << tmp_diff << " -> " 
+             << last_diff << ", system_latency=" << system_latency/1000 
+             << ", local_latency=" << local_latency/1000 << "msec." << endl;
       }
       break;
     }

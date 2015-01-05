@@ -615,6 +615,7 @@ void LocalTx::setSystemLatency(long system_latency)
   {
     ptt_ctrl->setLatency(tmp_diff);
     last_diff += tmp_diff;
+    cout << "*** setting local samples " << last_diff ;
   } 
 } /* LocalTx::setSystemLatency */
 
