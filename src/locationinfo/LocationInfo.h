@@ -143,6 +143,7 @@ class LocationInfo
       struct timeval last_tx_sec;
       bool tx_on;
       bool squelch_on;
+      unsigned    el_connects;
 
       AprsStatistics(void) : rx_on_nr(0), tx_on_nr(0), rx_sec(0), tx_sec(0),
                              last_rx_sec(), last_tx_sec(), tx_on(false),
@@ -157,6 +158,7 @@ class LocationInfo
         last_rx_sec.tv_sec = 0;
         last_tx_sec.tv_usec = 0;
         last_rx_sec.tv_usec = 0;
+        el_connects = 0;
       }
     };
 

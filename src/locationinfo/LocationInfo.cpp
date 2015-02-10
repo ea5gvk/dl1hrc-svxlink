@@ -215,6 +215,8 @@ void LocationInfo::updateQsoStatus(int action, const string& call,
   {
     (*it)->updateQsoStatus(action, call, info, call_list);
   }
+  (call_list.size() > 9 ? aprs_stats[info].el_connects = 9 : 
+        aprs_stats[info].el_connects = call_list.size());
 } /* LocationInfo::updateQsoStatus */
 
 
@@ -284,6 +286,7 @@ void LocationInfo::setReceiving(const std::string &name, struct timeval tv,
            (tv.tv_usec - aprs_stats[name].last_rx_sec.tv_usec)/1000000.0);
    }
 } /* LocationInfo::isReceiving */
+
 
 /****************************************************************************
  *
@@ -615,7 +618,7 @@ void LocationInfo::sendAprsStatistics(Timer *t)
 {
   char info[255];
   info[0] ='\0';
-  string head ="UNIT.RX Erlang,TX Erlang,RXcount/10m,TXcount/10m,none1,STxxxxxx,logic";
+  string head ="UNIT.RX Erlang,TX Erlang,RXcount/10m,TXcount/10m,none1,STExxxxx,logic";
 
   sprintf(info, "E%s-%s>RXTLM-1,TCPIP,qAR,%s::E%s-%s:%s\n",
        loc_cfg.prefix.c_str(), loc_cfg.mycall.c_str(), loc_cfg.mycall.c_str(),
@@ -648,12 +651,12 @@ void LocationInfo::sendAprsStatistics(Timer *t)
 
     info[0] = '\0';
     sprintf(info,
-     "E%s-%s>RXTLM-1,TCPIP,qAR,%s:T#%03d,%3.2f,%3.2f,%d,%d,0.0,%d%d000000,%s\n",
+     "E%s-%s>RXTLM-1,TCPIP,qAR,%s:T#%03d,%3.2f,%3.2f,%d,%d,0.0,%d%d%d00000,%s\n",
       loc_cfg.prefix.c_str(), loc_cfg.mycall.c_str(), loc_cfg.mycall.c_str(),
       sequence, (*it).second.rx_sec/(60*sinterval),
       (*it).second.tx_sec/(60*sinterval), (*it).second.rx_on_nr,
       (*it).second.tx_on_nr, ((*it).second.squelch_on ? 1 : 0),
-      ((*it).second.tx_on ? 1 : 0), (*it).first.c_str());
+      ((*it).second.tx_on ? 1 : 0), (*it).second.el_connects, (*it).first.c_str());
 
     // sends the Aprs stats information
     message = info;
