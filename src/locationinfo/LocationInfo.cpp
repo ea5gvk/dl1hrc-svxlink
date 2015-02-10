@@ -215,8 +215,8 @@ void LocationInfo::updateQsoStatus(int action, const string& call,
   {
     (*it)->updateQsoStatus(action, call, info, call_list);
   }
-  (call_list.size() > 9 ? aprs_stats[info].el_connects = 9 : 
-        aprs_stats[info].el_connects = call_list.size());
+  (call_list.size() > 9 ? el_connects = 9 : 
+               el_connects = call_list.size());
 } /* LocationInfo::updateQsoStatus */
 
 
@@ -656,7 +656,7 @@ void LocationInfo::sendAprsStatistics(Timer *t)
       sequence, (*it).second.rx_sec/(60*sinterval),
       (*it).second.tx_sec/(60*sinterval), (*it).second.rx_on_nr,
       (*it).second.tx_on_nr, ((*it).second.squelch_on ? 1 : 0),
-      ((*it).second.tx_on ? 1 : 0), (*it).second.el_connects, (*it).first.c_str());
+      ((*it).second.tx_on ? 1 : 0), el_connects, (*it).first.c_str());
 
     // sends the Aprs stats information
     message = info;

@@ -158,7 +158,6 @@ class LocationInfo
         last_rx_sec.tv_sec = 0;
         last_tx_sec.tv_usec = 0;
         last_rx_sec.tv_usec = 0;
-        el_connects = 0;
       }
     };
 
@@ -218,7 +217,8 @@ class LocationInfo
 
   private:
     static LocationInfo* _instance;
-    LocationInfo() : sequence(0), aprs_stats_timer(0), sinterval(0) {}
+    LocationInfo() : sequence(0), aprs_stats_timer(0), sinterval(0), 
+                     el_connects(0) {}
     LocationInfo(const LocationInfo&);
     ~LocationInfo(void) { delete aprs_stats_timer; };
 
@@ -229,6 +229,7 @@ class LocationInfo
     int         sequence;
     Async::Timer *aprs_stats_timer;
     unsigned int sinterval;
+    unsigned el_connects;
 
     bool parsePosition(const Async::Config &cfg, const std::string &name);
     bool parseLatitude(Coordinate &pos, const std::string &value);
