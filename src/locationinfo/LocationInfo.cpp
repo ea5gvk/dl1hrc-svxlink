@@ -651,12 +651,13 @@ void LocationInfo::sendAprsStatistics(Timer *t)
 
     info[0] = '\0';
     sprintf(info,
-     "E%s-%s>RXTLM-1,TCPIP,qAR,%s:T#%03d,%3.2f,%3.2f,%d,%d,0.0,%d%d%d00000,%s\n",
+     "E%s-%s>RXTLM-1,TCPIP,qAR,%s:T#%03d,%3.2f,%3.2f,%d,%d,%d,%d%d%d00000,%s\n",
       loc_cfg.prefix.c_str(), loc_cfg.mycall.c_str(), loc_cfg.mycall.c_str(),
       sequence, (*it).second.rx_sec/(60*sinterval),
       (*it).second.tx_sec/(60*sinterval), (*it).second.rx_on_nr,
-      (*it).second.tx_on_nr, ((*it).second.squelch_on ? 1 : 0),
-      ((*it).second.tx_on ? 1 : 0), el_connects, (*it).first.c_str());
+      (*it).second.tx_on_nr, el_connects, ((*it).second.squelch_on ? 1 : 0),
+      ((*it).second.tx_on ? 1 : 0), (el_connects > 0 ? 1 : 0), 
+      (*it).first.c_str());
 
     // sends the Aprs stats information
     message = info;
