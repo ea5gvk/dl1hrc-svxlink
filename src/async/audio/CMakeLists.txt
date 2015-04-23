@@ -48,7 +48,7 @@ set(EXPINC AsyncAudioSource.h AsyncAudioSink.h AsyncAudioProcessor.h
            AsyncAudioStreamStateDetector.h AsyncAudioEncoder.h
            AsyncAudioDecoder.h AsyncAudioRecorder.h
            AsyncAudioJitterFifo.h AsyncAudioDeviceFactory.h
-           AsyncAudioDevice.h)
+           AsyncAudioDevice.h AsyncAudioNoiseAdder.h)
 
 set(LIBSRC AsyncAudioSource.cpp AsyncAudioSink.cpp
            AsyncAudioProcessor.cpp AsyncAudioCompressor.cpp
@@ -62,7 +62,7 @@ set(LIBSRC AsyncAudioSource.cpp AsyncAudioSink.cpp
            AsyncAudioDecoderS16.cpp AsyncAudioEncoderGsm.cpp
            AsyncAudioDecoderGsm.cpp AsyncAudioRecorder.cpp
            AsyncAudioDeviceFactory.cpp AsyncAudioJitterFifo.cpp
-           AsyncAudioDeviceUDP.cpp)
+           AsyncAudioDeviceUDP.cpp AsyncAudioNoiseAdder.cpp)
 
 if(Speex_FOUND)
   set(LIBSRC ${LIBSRC} AsyncAudioEncoderSpeex.cpp AsyncAudioDecoderSpeex.cpp)
@@ -74,7 +74,7 @@ endif(Opus_FOUND)
 
 if(USE_ALSA)
   set(LIBSRC ${LIBSRC} AsyncAudioDeviceAlsa.cpp)
-  find_package(ALSA REQUIRED)
+  find_package(ALSA REQUIRED QUIET)
   set(LIBS ${LIBS} ${ALSA_LIBRARIES})
   include_directories(${ALSA_INCLUDE_DIRS})
 endif(USE_ALSA)
