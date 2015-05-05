@@ -303,7 +303,7 @@ bool Logic::initialize(void)
   if (cfg().getValue(name(), "TX_CTCSS_ON_RX", value))
   {
     string::iterator comma;
-    int cnt = 0;
+    int cnt = 1;
     string::iterator begin = value.begin();
     do
     {
@@ -927,7 +927,10 @@ void Logic::squelchOpen(bool is_open)
   }
 
   std::map<int,float>::iterator it = tx_ctcss_rx.find(rx().sqlRxId());
-  tx().setTxCtcss((*it).second);
+  if (it != tx_ctcss_rx.end())
+  {
+    tx().setTxCtcss((*it).second);
+  }
   updateTxCtcss(is_open, TX_CTCSS_SQL_OPEN);
 
   checkIdle();
