@@ -600,6 +600,12 @@ void LocalTx::setTransmittedSignalStrength(float siglev)
 } /* LocalTx::setTransmittedSignalLevel */
 
 
+void LocalTx::setTxCtcss(float fq)
+{
+  cout << "sending tone " << fq << endl;
+  sine_gen->setFq(fq);
+} /* LocalTx::setTxCtcss */
+
 
 /****************************************************************************
  *

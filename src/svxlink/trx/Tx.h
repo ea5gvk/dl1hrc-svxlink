@@ -179,6 +179,10 @@ class Tx : public sigc::trackable, public Async::AudioSink
     virtual void setTransmittedSignalStrength(float siglev) {}
     
     /**
+     */
+    virtual void setTxCtcss(float fq) {}
+    
+    /**
      * @brief 	This signal is emitted when the tx timeout timer expires
      *
      * This signal is emitted when the transmitter have been transmitting

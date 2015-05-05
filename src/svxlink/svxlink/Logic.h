@@ -289,6 +289,7 @@ class Logic : public sigc::trackable
     std::string                     online_cmd;
     DtmfDigitHandler                *dtmf_digit_handler;
     Async::Pty                      *state_pty;
+    std::map<int, float>           tx_ctcss_rx;
 
     void loadModules(void);
     void loadModule(const std::string& module_name);

@@ -188,6 +188,12 @@ class LocalTx : public Tx
      */
     void setTransmittedSignalStrength(float siglev);
     
+    /**
+     *
+     */
+     void setTxCtcss(float fq);
+     
+    
   private:
     std::string       	    name;
     Async::Config     	    &cfg;

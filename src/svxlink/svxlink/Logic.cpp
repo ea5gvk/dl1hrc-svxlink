@@ -300,6 +300,28 @@ bool Logic::initialize(void)
     cout << "Sel5 macro range from " << sel5_from << " to " << sel5_to << endl;
   }
 
+  if (cfg().getValue(name(), "TX_CTCSS_ON_RX", value))
+  {
+    string::iterator comma;
+    int cnt = 0;
+    string::iterator begin = value.begin();
+    do
+    {
+      comma = find(begin, value.end(), ',');
+      if (comma == value.end())
+      {
+        tx_ctcss_rx.insert(std::pair<int,float>(cnt, atof(string(begin, value.end()).c_str() ) ));
+      }
+      else
+      {
+        tx_ctcss_rx.insert(std::pair<int, float>(cnt, atof(string(begin, comma).c_str() ) ));
+        begin = comma + 1;
+        cnt++;
+      }
+    } while (comma != value.end());
+    cout << "TX_CTCSS_ON_RX\n";
+  }
+
   if (cfg().getValue(name(), "TX_CTCSS", value))
   {
     string::iterator comma;
@@ -904,6 +926,8 @@ void Logic::squelchOpen(bool is_open)
     LocationInfo::instance()->setReceiving(name(), tv, is_open);
   }
 
+  std::map<int,float>::iterator it = tx_ctcss_rx.find(rx().sqlRxId());
+  tx().setTxCtcss((*it).second);
   updateTxCtcss(is_open, TX_CTCSS_SQL_OPEN);
 
   checkIdle();
