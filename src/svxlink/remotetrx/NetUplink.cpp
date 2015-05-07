@@ -503,6 +503,13 @@ void NetUplink::handleMsg(Msg *msg)
       break;
     }
     
+    case MsgSendCtcss::TYPE:
+    {
+      MsgSendCtcss *ctcss_msg = reinterpret_cast<MsgSendCtcss *>(msg);
+      tx->setTxCtcss(ctcss_msg->Fq());
+      break;        
+    }
+    
     case MsgRxAudioCodecSelect::TYPE:
     {
       MsgRxAudioCodecSelect *codec_msg = 

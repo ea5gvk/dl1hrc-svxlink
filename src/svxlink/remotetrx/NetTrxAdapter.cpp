@@ -249,7 +249,10 @@ class TxAdapter : public Tx, public AudioSource
       }
     }
     
-
+    /**
+     */
+    virtual void setTxCtcss(float fq) {}
+     
 
     int writeSamples(const float *samples, int count)
     {

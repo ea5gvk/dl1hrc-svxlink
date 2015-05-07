@@ -172,7 +172,7 @@ class MsgProtoVer : public Msg
   public:
     static const unsigned TYPE  = 0;
     static const uint16_t MAJOR = 2;
-    static const uint16_t MINOR = 4;
+    static const uint16_t MINOR = 5;
     MsgProtoVer(void)
       : Msg(TYPE, sizeof(MsgProtoVer)), m_major(MAJOR),
         m_minor(MINOR) {}
@@ -656,6 +656,18 @@ class MsgFlush : public Msg
 }; /* MsgFlush */
 
 
+class MsgSendCtcss : public Msg
+{
+  public:
+    static const unsigned TYPE  = 304;
+    MsgSendCtcss(float tone_fq)
+      : Msg(TYPE, sizeof(MsgSendCtcss)), m_tone_fq(tone_fq) {}
+    float Fq(void) const { return m_tone_fq; }
+  
+  private:
+    float m_tone_fq;
+    
+}; /* MsgSendCtcss */
 
 
 class MsgTxTimeout : public Msg

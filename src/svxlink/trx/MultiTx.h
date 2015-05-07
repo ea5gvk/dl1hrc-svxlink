@@ -176,6 +176,8 @@ class MultiTx : public Tx
      */
     virtual void setTransmittedSignalStrength(float siglev);
     
+    /**
+     */
     virtual void setTxCtcss(float fq);
     
   protected:

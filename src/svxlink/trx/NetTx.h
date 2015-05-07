@@ -173,6 +173,10 @@ class NetTx : public Tx
      */
     virtual void sendDtmf(const std::string& digits);
     
+    /**
+     */
+    virtual void setTxCtcss(float fq);
+    
 
   protected:
 

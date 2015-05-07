@@ -248,6 +248,13 @@ void NetTx::sendDtmf(const std::string& digits)
 } /* NetTx::sendDtmf */
 
 
+void NetTx::setTxCtcss(float fq)
+{
+  MsgSendCtcss *msg = new MsgSendCtcss(fq);
+  sendMsg(msg);  
+} /* NetTx::setTxCtcss */
+
+
 
 /****************************************************************************
  *
