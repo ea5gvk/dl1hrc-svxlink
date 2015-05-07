@@ -240,6 +240,16 @@ void MultiTx::setTransmittedSignalStrength(float siglev)
 } /* MultiTx::setTransmittedSignalStrength */
 
 
+void MultiTx::setTxCtcss(float fq)
+{
+  list<Tx *>::iterator it;
+  for (it=txs.begin(); it!=txs.end(); ++it)
+  {
+    cout << "sending tone " << fq << " Hz" << endl;
+    (*it)->setTxCtcss(fq);
+  }
+} /* LocalTx::setTxCtcss */
+
 
 /****************************************************************************
  *
