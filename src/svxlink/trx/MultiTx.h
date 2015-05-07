@@ -177,6 +177,8 @@ class MultiTx : public Tx
     virtual void setTransmittedSignalStrength(float siglev);
     
     /**
+     * @brief   Set the ctcss tone value to send over the tx
+     * @param   fq The tone frequency in Hz
      */
     virtual void setTxCtcss(float fq);
     

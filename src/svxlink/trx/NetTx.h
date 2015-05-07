@@ -174,6 +174,8 @@ class NetTx : public Tx
     virtual void sendDtmf(const std::string& digits);
     
     /**
+     * @brief 	Send a float of the requested ctcss tone
+     * @param 	fq the tone in Hz
      */
     virtual void setTxCtcss(float fq);
     
