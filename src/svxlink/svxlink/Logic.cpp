@@ -302,6 +302,9 @@ bool Logic::initialize(void)
 
   if (cfg().getValue(name(), "TX_CTCSS_ON_RX", value))
   {
+    cout << "ATTENTION: This version is supporting an additional NetTrxMsg-command "
+         << "to control the ctcss-tone on the tx. So a problem with the "
+         << "recent version of SvxServer may occur.\n";
     string::iterator comma;
     int cnt = 1;
     string::iterator begin = value.begin();
