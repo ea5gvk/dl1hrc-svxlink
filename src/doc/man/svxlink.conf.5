@@ -250,6 +250,14 @@ sounds and roger beeps will not have tone sent with them though.
 will always transmit a CTCSS tone as soon as the transmitter is turned on.
 .RE
 .TP
+.B TX_CTCSS_ON_RX
+Define a comma sperated list of float values as tone frequencies here. The 
+values will be mapped to the according Rx. That means if Rx1 is receiving a
+signal the first ctcss tone will be send, if the second Rx is receiving the 
+second ctcss tone will be send and so on.
+Example:
+TX_CTCSS_ON_RX=67.9,123.0,250.3
+.TP
 .B MACROS
 Point out a section that contains the macros that should be used by this logic
 core. See the section description for macros below for more information.
