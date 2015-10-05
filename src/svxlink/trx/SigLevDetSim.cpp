@@ -1,8 +1,8 @@
 /**
-@file	 SigLevDetDdr.cpp
-@brief   A signal level detector measuring power levels using a DDR
+@file	 SigLevDetSim.cpp
+@brief   A simulated signal level detector
 @author  Tobias Blomberg / SM0SVX
-@date	 2014-07-17
+@date	 2015-10-03
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
@@ -24,16 +24,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 \endverbatim
 */
 
-
-
 /****************************************************************************
  *
  * System Includes
  *
  ****************************************************************************/
 
-#include <iostream>
-#include <cstdio>
 #include <cstdlib>
 
 
@@ -52,9 +48,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-#include "SigLevDetDdr.h"
-#include "Ddr.h"
-
+#include "SigLevDetSim.h"
 
 
 /****************************************************************************
@@ -65,7 +59,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 using namespace std;
 using namespace Async;
-
 
 
 /****************************************************************************
@@ -106,6 +99,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
+unsigned int SigLevDetSim::next_seed = 0;
 
 
 /****************************************************************************
@@ -114,74 +108,76 @@ using namespace Async;
  *
  ****************************************************************************/
 
-SigLevDetDdr::SigLevDetDdr(void)
+SigLevDetSim::SigLevDetSim(void)
   : sample_rate(0), block_idx(0), last_siglev(0), integration_time(1),
-    update_interval(0), update_counter(0), pwr_sum(0.0), slope(1.0),
-    offset(0.0), block_size(0)
+    update_interval(0), update_counter(0), siglev_toggle_interval(0),
+    siglev_toggle_counter(0), siglev_rand_interval(0), siglev_rand_counter(0),
+    block_size(0), siglev_min(0.0f), siglev_max(100.0f), siglev_default(0.0f),
+    seed(next_seed++)
 {
-} /* SigLevDetDdr::SigLevDetDdr */
+} /* SigLevDetSim::SigLevDetSim */
 
 
-SigLevDetDdr::~SigLevDetDdr(void)
+SigLevDetSim::~SigLevDetSim(void)
 {
-} /* SigLevDetDdr::~SigLevDetDdr */
+} /* SigLevDetSim::~SigLevDetSim */
 
 
-bool SigLevDetDdr::initialize(Config &cfg, const string& name, int sample_rate)
+bool SigLevDetSim::initialize(Config &cfg, const string& name, int sample_rate)
 {
-  Ddr *ddr = Ddr::find(name);
-  if (ddr == 0)
-  {
-    cout << "*** ERROR: Could not find a DDR named \"" << name << "\". "
-         << "Cannot use DDR signal level detector.\n";
-    return false;
-  }
-  ddr->preDemod.connect(mem_fun(*this, &SigLevDetDdr::processSamples));
-
   this->sample_rate = sample_rate;
-
-  cfg.getValue(name, "SIGLEV_OFFSET", offset);
-  cfg.getValue(name, "SIGLEV_SLOPE", slope);
-
   block_size = BLOCK_LENGTH * sample_rate / 1000;
+
+  cfg.getValue(name, "SIGLEV_MIN", siglev_min);
+  cfg.getValue(name, "SIGLEV_MAX", siglev_max);
+  cfg.getValue(name, "SIGLEV_DEFAULT", siglev_default);
+
+  unsigned siglev_toggle_interval_ms = 0;
+  cfg.getValue(name, "SIGLEV_TOGGLE_INTERVAL", siglev_toggle_interval_ms);
+  siglev_toggle_interval = siglev_toggle_interval_ms * sample_rate / 1000;
+
+  int siglev_rand_interval_ms = 0;
+  cfg.getValue(name, "SIGLEV_RAND_INTERVAL", siglev_rand_interval_ms);
+  siglev_rand_interval = siglev_rand_interval_ms * sample_rate / 1000;
 
   reset();
 
   return SigLevDet::initialize(cfg, name, sample_rate);
   
-} /* SigLevDetDdr::initialize */
+} /* SigLevDetSim::initialize */
 
 
-void SigLevDetDdr::reset(void)
+void SigLevDetSim::reset(void)
 {
   block_idx = 0;
-  last_siglev = 0;
+  last_siglev = siglev_default;
   update_counter = 0;
+  siglev_toggle_counter = 0;
+  siglev_rand_counter = 0;
   siglev_values.clear();
-  pwr_sum = 0.0;
-} /* SigLevDetDdr::reset */
+} /* SigLevDetSim::reset */
 
 
-void SigLevDetDdr::setContinuousUpdateInterval(int interval_ms)
+void SigLevDetSim::setContinuousUpdateInterval(int interval_ms)
 {
   update_interval = interval_ms * sample_rate / 1000;
   update_counter = 0;  
-} /* SigLevDetDdr::setContinuousUpdateInterval */
+} /* SigLevDetSim::setContinuousUpdateInterval */
 
 
-void SigLevDetDdr::setIntegrationTime(int time_ms)
+void SigLevDetSim::setIntegrationTime(int time_ms)
 {
     // Calculate the integration time expressed as the
     // number of processing blocks.
-  integration_time = time_ms * 16000 / 1000 / block_size;
+  integration_time = time_ms * sample_rate / 1000 / block_size;
   if (integration_time <= 0)
   {
     integration_time = 1;
   }
-} /* SigLevDetDdr::setIntegrationTime */
+} /* SigLevDetSim::setIntegrationTime */
 
 
-float SigLevDetDdr::siglevIntegrated(void) const
+float SigLevDetSim::siglevIntegrated(void) const
 {
   if (siglev_values.size() > 0)
   {
@@ -194,7 +190,7 @@ float SigLevDetDdr::siglevIntegrated(void) const
     return sum / siglev_values.size();
   }
   return 0;
-} /* SigLevDetDdr::siglevIntegrated */
+} /* SigLevDetSim::siglevIntegrated */
 
 
 
@@ -204,6 +200,51 @@ float SigLevDetDdr::siglevIntegrated(void) const
  *
  ****************************************************************************/
 
+int SigLevDetSim::writeSamples(const float *samples, int count)
+{
+  for (int i=0; i<count; ++i)
+  {
+    if (siglev_rand_interval > 0)
+    {
+      if (++siglev_rand_counter >= siglev_rand_interval)
+      {
+        siglev_rand_counter = 0;
+        randNewSiglev();
+      }
+    }
+
+    if (siglev_toggle_interval > 0)
+    {
+      if (++siglev_toggle_counter >= siglev_toggle_interval)
+      {
+        siglev_toggle_counter = 0;
+        toggleSiglev();
+      }
+    }
+
+    if (++block_idx == block_size)
+    {
+      block_idx = 0;
+      siglev_values.push_back(last_siglev);
+      if (siglev_values.size() > integration_time)
+      {
+	siglev_values.erase(siglev_values.begin(),
+		siglev_values.begin()+siglev_values.size()-integration_time);
+      }
+    }
+
+    if (update_interval > 0)
+    {
+      if (++update_counter >= update_interval)
+      {
+        update_counter = 0;
+        signalLevelUpdated(lastSiglev());
+      }
+    }
+  }
+
+  return count;
+} /* SigLevDetSim::writeSamples */
 
 
 /****************************************************************************
@@ -212,42 +253,32 @@ float SigLevDetDdr::siglevIntegrated(void) const
  *
  ****************************************************************************/
 
-void SigLevDetDdr::processSamples(const vector<RtlTcp::Sample> &samples)
+void SigLevDetSim::randNewSiglev(void)
 {
-  for (vector<RtlTcp::Sample>::const_iterator it = samples.begin();
-       it != samples.end();
-       ++it)
+  if ((rand_r(&seed) > RAND_MAX/2) && (last_siglev < siglev_max))
   {
-    pwr_sum += it->real() * it->real() + it->imag() * it->imag();
-    if (++block_idx == block_size)
-    {
-      last_siglev = offset + slope * 10.0 * log10(pwr_sum / block_size);
-      siglev_values.push_back(last_siglev);
-      if (siglev_values.size() > integration_time)
-      {
-	siglev_values.erase(siglev_values.begin(),
-		siglev_values.begin()+siglev_values.size()-integration_time);
-      }
-      
-      if (update_interval > 0)
-      {
-	update_counter += block_size;
-	if (update_counter >= update_interval)
-	{
-	  signalLevelUpdated(lastSiglev());
-	  update_counter = 0;
-	}
-      }
-
-      block_idx = 0;
-      pwr_sum = 0.0;
-    }
+    last_siglev += 1.0f;
   }
-} /* SigLevDetDdr::processSamples */
+  else if (last_siglev > siglev_min)
+  {
+    last_siglev -= 1.0f;
+  }
+} /* SigLevDetSim::randNewSiglev */
 
+
+void SigLevDetSim::toggleSiglev(void)
+{
+  if (last_siglev == siglev_min)
+  {
+    last_siglev = siglev_max;
+  }
+  else
+  {
+    last_siglev = siglev_min;
+  }
+} /* SigLevDetSim::toggleSiglev */
 
 
 /*
  * This file has not been truncated
  */
-

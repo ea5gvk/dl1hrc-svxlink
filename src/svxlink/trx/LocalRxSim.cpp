@@ -1,12 +1,12 @@
 /**
-@file	 PttPty.cpp
-@brief   A PTT hardware controller using a PTY to signal an external script
-@author  Tobias Blomberg / SM0SVX & Steve Koehler / DH1DM & Adi Bier / DL1HRC
-@date	 2014-05-05
+@file	 LocalRxSim.cpp
+@brief   A class to simulate a local receiver
+@author  Tobias Blomberg / SM0SVX
+@date	 2015-10-03
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2003-2014 Tobias Blomberg / SM0SVX
+Copyright (C) 2004-2014 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,8 +24,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 \endverbatim
 */
 
-
-
 /****************************************************************************
  *
  * System Includes
@@ -41,7 +39,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-#include <AsyncPty.h>
+#include <AsyncConfig.h>
+#include <AsyncAudioPacer.h>
 
 
 /****************************************************************************
@@ -50,8 +49,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-#include "PttPty.h"
-
+#include "LocalRxSim.h"
 
 
 /****************************************************************************
@@ -103,6 +101,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
+unsigned int LocalRxSim::next_seed = 0;
 
 
 /****************************************************************************
@@ -111,47 +110,56 @@ using namespace Async;
  *
  ****************************************************************************/
 
-PttPty::PttPty(void)
-  : pty(0)
+LocalRxSim::LocalRxSim(Config &cfg, const std::string& name)
+  : LocalRxBase(cfg, name), cfg(cfg), pacer(0)
 {
-} /* PttPty::PttPty */
+} /* LocalRxSim::LocalRxSim */
 
 
-PttPty::~PttPty(void)
+LocalRxSim::~LocalRxSim(void)
 {
-  delete pty;
-} /* PttPty::~PttPty */
+} /* LocalRxSim::~LocalRxSim */
 
 
-bool PttPty::initialize(Async::Config &cfg, const std::string name)
+bool LocalRxSim::initialize(void)
 {
+  int tone_fq = 1000;
+  cfg.getValue(name(), "SIM_TONE_FQ", tone_fq);
+  audio_gen.setFq(tone_fq);
 
-  string ptt_pty;
-  if (!cfg.getValue(name, "PTT_PTY", ptt_pty))
+  string waveform("SIN");
+  cfg.getValue(name(), "SIM_WAVEFORM", waveform);
+  if (waveform == "SIN")
   {
-    cerr << "*** ERROR: Config variable " << name << "/PTT_PTY not set\n";
+    audio_gen.setWaveform(AudioGenerator::SIN);
+  }
+  else if (waveform == "SQUARE")
+  {
+    audio_gen.setWaveform(AudioGenerator::SQUARE);
+  }
+  else
+  {
+    cerr << "*** ERROR: Unknown waveform specified in "
+         << name() << "/" << "SIM_WAVEFORM (\"" << waveform 
+         << "\"). Valid values are: SIN, SQUARE.\n";
     return false;
   }
 
-  pty = new Pty(ptt_pty);
-  if (pty == 0)
+  float sim_tone_pwr_db = -20.0f;
+  cfg.getValue(name(), "SIM_TONE_PWR", sim_tone_pwr_db);
+  audio_gen.setPower(sim_tone_pwr_db);
+
+  pacer = new Async::AudioPacer(INTERNAL_SAMPLE_RATE, 128, 0);
+  audio_gen.registerSink(pacer, true);
+
+  if (!LocalRxBase::initialize())
   {
     return false;
   }
-  return pty->open();
-} /* PttPty::initialize */
 
-
-/*
- * This functions sends a character over the pty-device:
- * T  to direct the controller to enable the TX
- * R  to direct the controller to disable the TX
- */
-bool PttPty::setTxOn(bool tx_on)
-{
-  char cmd(tx_on ? 'T' : 'R');
-  return (pty->write(&cmd, 1) == 1);
-} /* PttPty::setTxOn */
+  return true;
+  
+} /* LocalRxSim:initialize */
 
 
 
@@ -160,6 +168,30 @@ bool PttPty::setTxOn(bool tx_on)
  * Protected member functions
  *
  ****************************************************************************/
+
+bool LocalRxSim::audioOpen(void)
+{
+  audio_gen.enable(true);
+  return true;
+} /* LocalRxSim::audioOpen */
+
+
+void LocalRxSim::audioClose(void)
+{
+  audio_gen.enable(false);
+} /* LocalRxSim::audioClose */
+
+
+int LocalRxSim::audioSampleRate(void)
+{
+  return INTERNAL_SAMPLE_RATE;
+} /* LocalRxSim::audioSampleRate */
+
+
+Async::AudioSource *LocalRxSim::audioSource(void)
+{
+  return pacer;
+} /* LocalRxSim::audioSource */
 
 
 

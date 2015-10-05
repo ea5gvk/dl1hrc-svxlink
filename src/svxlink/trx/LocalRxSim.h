@@ -1,13 +1,12 @@
 /**
-@file	 ModuleTemplate.h
-@brief   A_brief_description_of_this_module
+@file	 LocalRxSim.h
+@brief   A receiver class to simulate local receivers
 @author  Tobias Blomberg / SM0SVX
-@date	 2005-08-28
+@date	 2015-10-03
 
 \verbatim
-A module (plugin) for the svxlink server, a multi purpose tranciever
-frontend system.
-Copyright (C) 2004-2005  Tobias Blomberg / SM0SVX
+SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
+Copyright (C) 2004-2014 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,9 +24,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 \endverbatim
 */
 
-
-#ifndef MODULE_TEMPLATE_INCLUDED
-#define MODULE_TEMPLATE_INCLUDED
+#ifndef LOCAL_RX_SIM_INCLUDED
+#define LOCAL_RX_SIM_INCLUDED
 
 
 /****************************************************************************
@@ -35,8 +33,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * System Includes
  *
  ****************************************************************************/
-
-#include <string>
 
 
 
@@ -46,9 +42,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-#include <Module.h>
-#include <version/SVXLINK.h>
-
+#include <AsyncAudioGenerator.h>
 
 
 /****************************************************************************
@@ -57,6 +51,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
+#include "LocalRxBase.h"
 
 
 /****************************************************************************
@@ -65,6 +60,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
+namespace Async
+{
+  class AudioPacer;
+};
 
 
 /****************************************************************************
@@ -83,7 +82,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-  
+
 
 /****************************************************************************
  *
@@ -108,34 +107,83 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ****************************************************************************/
 
 /**
-@brief	A_brief_description_of_this_class
+@brief	A class to simulate local receivers
 @author Tobias Blomberg
-@date   2005-08-28
+@date   2015-10-03
+
+This class simulate a local receiver.
 */
-class ModuleTemplate : public Module
+class LocalRxSim : public LocalRxBase
 {
   public:
-    ModuleTemplate(void *dl_handle, Logic *logic, const std::string& cfg_name);
-    ~ModuleTemplate(void);
-    const char *compiledForVersion(void) const { return SVXLINK_VERSION; }
+    /**
+     * @brief 	Default constuctor
+     */
+    explicit LocalRxSim(Async::Config &cfg, const std::string& name);
+  
+    /**
+     * @brief 	Destructor
+     */
+    virtual ~LocalRxSim(void);
+  
+    /**
+     * @brief 	Initialize the receiver object
+     * @return 	Return \em true on success, or \em false on failure
+     */
+    virtual bool initialize(void);
+    
+  protected:
+    /**
+     * @brief   Open the audio input source
+     * @return  Returns \em true on success or else \em false
+     *
+     * This function is used during the initialization of LocalRxBase so make
+     * sure that the audio source object is initialized before calling the
+     * LocalRxBase::initialize function.
+     */
+    virtual bool audioOpen(void);
 
+    /**
+     * @brief   Close the audio input source
+     *
+     * This function may be used during the initialization of LocalRxBase so
+     * make sure that the audio source object is initialized before calling the
+     * LocalRxSimBase::initialize function.
+     */
+    virtual void audioClose(void);
+
+    /**
+     * @brief   Get the sampling rate of the audio source
+     * @return  Returns the sampling rate of the audio source
+     *
+     * This function is used during the initialization of LocalRxBase so make
+     * sure that the proper sampling rate can be returned before calling
+     * the LocalRxSimBase::initialize function.
+     */
+    virtual int audioSampleRate(void);
+
+    /**
+     * @brief   Get the audio source object
+     * @return  Returns an instantiated audio source object
+     *
+     * This function is used during the initialization of LocalRxBase so make
+     * sure that the audio source object is initialized before calling
+     * the LocalRxSimBase::initialize function.
+     */
+    virtual Async::AudioSource *audioSource(void);
+    
   private:
-    bool initialize(void);
-    void activateInit(void);
-    void deactivateCleanup(void);
-    bool dtmfDigitReceived(char digit, int duration);
-    void dtmfCmdReceived(const std::string& cmd);
-    //void dtmfCmdReceivedWhenIdle(const std::string &cmd);
-    void squelchOpen(bool is_open);
-    void allMsgsWritten(void);
+    static unsigned int next_seed;
 
-};  /* class ModuleTemplate */
+    Async::Config         &cfg;
+    Async::AudioGenerator audio_gen;
+    Async::AudioPacer     *pacer;
+};  /* class LocalRxSim */
 
 
 //} /* namespace */
 
-#endif /* MODULE_TEMPLATE_INCLUDED */
-
+#endif /* LOCAL_RX_SIM_INCLUDED */
 
 
 /*
