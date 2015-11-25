@@ -190,8 +190,8 @@ class NetTx : public Tx
     bool      	      	  pending_flush;
     bool      	      	  unflushed_samples;
     Async::AudioEncoder   *audio_enc;
-    std::string           remote_call;
-    std::string           own_call;
+    std::string           remote_stationname;
+    std::string           own_stationname;
     
     void connectionReady(bool is_ready);
     void handleMsg(NetTrxMsg::Msg *msg);

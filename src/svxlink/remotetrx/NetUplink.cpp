@@ -129,8 +129,8 @@ NetUplink::NetUplink(Config &cfg, const string &name, Rx *rx, Tx *tx,
     cfg(cfg), name(name), last_msg_timestamp(), heartbeat_timer(0),
     audio_enc(0), audio_dec(0), loopback_con(0), rx_splitter(0),
     tx_selector(0), state(STATE_DISC), mute_tx_timer(0), tx_muted(false),
-    fallback_enabled(false), tx_ctrl_mode(Tx::TX_OFF), callsign("NOCALL"),
-    remote_call("NOCALL")
+    fallback_enabled(false), tx_ctrl_mode(Tx::TX_OFF), stationname("NOCALL"),
+    remote_stationname("NOCALL")
 {
   heartbeat_timer = new Timer(10000);
   heartbeat_timer->setEnable(false);
@@ -193,7 +193,7 @@ bool NetUplink::initialize(void)
   
   cfg.getValue(name, "FALLBACK_REPEATER", fallback_enabled, true);
   cfg.getValue(name, "AUTH_KEY", auth_key, true);
-  cfg.getValue(name, "CALLSIGN", callsign, true);
+  cfg.getValue(name, "STATIONNAME", stationname, true);
   
   int mute_tx_on_rx = -1;
   cfg.getValue(name, "MUTE_TX_ON_RX", mute_tx_on_rx, true);
@@ -477,8 +477,8 @@ void NetUplink::handleMsg(Msg *msg)
         }
         setState(STATE_READY);
 
-        // sending callsign to remote station
-        MsgCallsign *cs_msg = new MsgCallsign(callsign);
+        // sending station name to remote station
+        MsgStationname *cs_msg = new MsgStationname(stationname);
         sendMsg(cs_msg);
       }
       else
@@ -642,11 +642,11 @@ void NetUplink::handleMsg(Msg *msg)
       break;
     } 
     
-    case MsgCallsign::TYPE:
+    case MsgStationname::TYPE:
     {
-      MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
-      remote_call = cs_msg->getCallsign();
-      cout << "Remotestation is " << remote_call << endl;
+      MsgStationname *cs_msg = reinterpret_cast<MsgStationname*>(msg);
+      remote_stationname = cs_msg->getStationname();
+      cout << "Remotestation is " << remote_stationname << endl;
       break;  
     }
     

@@ -190,8 +190,8 @@ class NetUplink : public Uplink
     bool		    tx_muted;
     bool                    fallback_enabled;
     Tx::TxCtrlMode	    tx_ctrl_mode;
-    std::string             callsign;   
-    std::string             remote_call; 
+    std::string             stationname;   
+    std::string             remote_stationname; 
     
     NetUplink(const NetUplink&);
     NetUplink& operator=(const NetUplink&);

@@ -428,25 +428,25 @@ class MsgAudio : public Msg
 }; /* MsgAudio */
 
 
-class MsgCallsign : public Msg
+class MsgStationname : public Msg
 {
   public:
     static const unsigned TYPE = 103;
     static const int MAX_DESC = 25;
-    MsgCallsign(std::string callsign)
-      : Msg(TYPE, sizeof(MsgCallsign))
+    MsgStationname(std::string stationname)
+      : Msg(TYPE, sizeof(MsgStationname))
   { 
-    strncpy(m_callsign, callsign.c_str(), MAX_DESC);
-    m_callsign[MAX_DESC] = 0;
-    setSize(size() - MAX_DESC + strlen(m_callsign));
+    strncpy(m_stationname, stationname.c_str(), MAX_DESC);
+    m_stationname[MAX_DESC] = 0;
+    setSize(size() - MAX_DESC + strlen(m_stationname));
   }
 
-  std::string getCallsign(void) const { return m_callsign; }   
+  std::string getStationname(void) const { return m_stationname; }
   
   private:
-    char m_callsign[MAX_DESC + 1];
+    char m_stationname[MAX_DESC + 1];
 
-}; /* NsgCallsign */
+}; /* NsgStationname */
 
 
 

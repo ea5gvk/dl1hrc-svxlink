@@ -122,8 +122,8 @@ NetTx::NetTx(Config &cfg, const string& name)
   : cfg(cfg), name(name), tcp_con(0), log_disconnects_once(false),
     log_disconnect(true), is_transmitting(false), mode(Tx::TX_OFF),
     ctcss_enable(false), pacer(0), is_connected(false), pending_flush(false),
-    unflushed_samples(false), audio_enc(0), remote_call("NOCALL"), 
-    own_call("NOCALL")
+    unflushed_samples(false), audio_enc(0), remote_stationname("NOCALL"), 
+    own_stationname("NOCALL")
 {
 } /* NetTx::NetTx */
 
@@ -163,7 +163,7 @@ bool NetTx::initialize(void)
   
   string auth_key;
   cfg.getValue(name, "AUTH_KEY", auth_key);
-  cfg.getValue(name, "CALLSIGN", own_call);
+  cfg.getValue(name, "STATIONNAME", own_stationname);
   
   pacer = new AudioPacer(INTERNAL_SAMPLE_RATE, 512, 50);
   setHandler(pacer);
@@ -307,7 +307,7 @@ void NetTx::connectionReady(bool is_ready)
     }
     sendMsg(msg);
     
-    MsgCallsign *oc_msg = new MsgCallsign(own_call);
+    MsgStationname *oc_msg = new MsgStationname(own_stationname);
     sendMsg(oc_msg);
   }
   else
@@ -316,7 +316,7 @@ void NetTx::connectionReady(bool is_ready)
     {
       cout << name << ": Disconnected from remote transmitter "
           << " at " << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
-          << " ("  << remote_call << "): "
+          << " ("  << remote_stationname << "): "
           << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
           << "\n";
     }
@@ -356,11 +356,11 @@ void NetTx::handleMsg(Msg *msg)
       break;
     }
      
-    case MsgCallsign::TYPE:
+    case MsgStationname::TYPE:
     {
-      MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
-      remote_call = cs_msg->getCallsign();
-      cout << name << ": Remotestation is " << remote_call << endl;
+      MsgStationname *cs_msg = reinterpret_cast<MsgStationname*>(msg);
+      remote_stationname = cs_msg->getStationname();
+      cout << name << ": Remotestation is " << remote_stationname << endl;
       break;
     }
    
@@ -428,7 +428,7 @@ void NetTx::setIsTransmitting(bool is_transmitting)
 {
   if (is_transmitting != this->is_transmitting)
   {
-    cout << name << ": The transmitter (" << remote_call << ") is "
+    cout << name << ": The transmitter (" << remote_stationname << ") is "
       	 << (is_transmitting ? "ON" : "OFF") << endl;
     this->is_transmitting = is_transmitting;
     transmitterStateChange(is_transmitting);

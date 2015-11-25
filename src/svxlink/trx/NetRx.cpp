@@ -134,7 +134,8 @@ NetRx::NetRx(Config &cfg, const string& name)
   : Rx(cfg, name), cfg(cfg), mute_state(Rx::MUTE_ALL), tcp_con(0),
     log_disconnects_once(false), log_disconnect(true),
     last_signal_strength(0.0), last_sql_rx_id(0), unflushed_samples(false),
-    sql_is_open(false), audio_dec(0), remote_call("NOCALL"), own_call("NOCALL")
+    sql_is_open(false), audio_dec(0), remote_stationname("NOCALL"), 
+    own_stationname("NOCALL")
 {
 } /* NetRx::NetRx */
 
@@ -187,7 +188,7 @@ bool NetRx::initialize(void)
   
   string auth_key;
   cfg.getValue(name(), "AUTH_KEY", auth_key);
-  cfg.getValue(name(), "CALLSIGN", own_call);
+  cfg.getValue(name(), "STATIONNAME", own_stationname);
   
   audio_dec = AudioDecoder::create(audio_dec_name);
   if (audio_dec == 0)
@@ -375,7 +376,7 @@ void NetRx::connectionReady(bool is_ready)
     cout << name() << ": Requesting CODEC \"" << msg->name() << "\"\n";
     sendMsg(msg);
 
-    MsgCallsign *oc_msg = new MsgCallsign(own_call);
+    MsgStationname *oc_msg = new MsgStationname(own_stationname);
     sendMsg(oc_msg);
   }
   else
@@ -384,7 +385,7 @@ void NetRx::connectionReady(bool is_ready)
     {
       cout << name() << ": Disconnected from remote receiver " 
           << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
-          << " (" << remote_call << "): " 
+          << " (" << remote_stationname << "): " 
           << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
           << "\n";
     }
@@ -488,11 +489,11 @@ void NetRx::handleMsg(Msg *msg)
       break;
     }
     
-    case MsgCallsign::TYPE:
+    case MsgStationname::TYPE:
     {
-      MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
-      remote_call = cs_msg->getCallsign();
-      cout << name() << ": Remotestation is " << remote_call << endl;
+      MsgStationname *cs_msg = reinterpret_cast<MsgStationname*>(msg);
+      remote_stationname = cs_msg->getStationname();
+      cout << name() << ": Remotestation is " << remote_stationname << endl;
       break;
     }
 
