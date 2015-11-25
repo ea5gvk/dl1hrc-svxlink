@@ -375,11 +375,8 @@ void NetRx::connectionReady(bool is_ready)
     cout << name() << ": Requesting CODEC \"" << msg->name() << "\"\n";
     sendMsg(msg);
 
-    cout << "1) MsgCallsign *oc_msg" << endl;
     MsgCallsign *oc_msg = new MsgCallsign(own_call);
-    cout << "2) MsgCallsign *oc_msg" << endl;
     sendMsg(oc_msg);
-    cout << "3) MsgCallsign *oc_msg" << endl;
   }
   else
   {

@@ -432,13 +432,19 @@ class MsgCallsign : public Msg
 {
   public:
     static const unsigned TYPE = 103;
+    static const int MAX_DESC = 25;
     MsgCallsign(std::string callsign)
-      : Msg(TYPE, sizeof(MsgCallsign)), m_callsign(callsign) {}
+      : Msg(TYPE, sizeof(MsgCallsign))
+  { 
+    strncpy(m_callsign, callsign.c_str(), MAX_DESC);
+    m_callsign[MAX_DESC] = 0;
+    setSize(size() - MAX_DESC + strlen(m_callsign));
+  }
 
-  std::string getCallsign(void) const { return m_callsign; }
+  std::string getCallsign(void) const {return m_callsign; }   
   
   private:
-    std::string m_callsign;
+    char m_callsign[MAX_DESC + 1];
 
 }; /* NsgCallsign */
 
