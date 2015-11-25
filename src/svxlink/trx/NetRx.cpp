@@ -382,9 +382,9 @@ void NetRx::connectionReady(bool is_ready)
   {
     if (log_disconnect)
     {
-      cout << name() << ": Disconnected from remote receiver (" << remote_call 
-          << ") " << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
-          << ": " 
+      cout << name() << ": Disconnected from remote receiver " 
+          << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
+          << " (" << remote_call << "): " 
           << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
           << "\n";
     }
@@ -492,7 +492,7 @@ void NetRx::handleMsg(Msg *msg)
     {
       MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
       remote_call = cs_msg->getCallsign();
-      cout << "Remotestation is " << remote_call << endl;
+      cout << name() << ": Remotestation is " << remote_call << endl;
       break;
     }
 

@@ -314,9 +314,9 @@ void NetTx::connectionReady(bool is_ready)
   {
     if (log_disconnect)
     {
-      cout << name << ": Disconnected from remote transmitter (" << remote_call 
-          << ") at " << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
-          << ": "
+      cout << name << ": Disconnected from remote transmitter "
+          << " at " << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
+          << " ("  << remote_call << "): "
           << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
           << "\n";
     }
@@ -360,6 +360,7 @@ void NetTx::handleMsg(Msg *msg)
     {
       MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
       remote_call = cs_msg->getCallsign();
+      cout << name << ": Remotestation is " << remote_call << endl;
       break;
     }
    
