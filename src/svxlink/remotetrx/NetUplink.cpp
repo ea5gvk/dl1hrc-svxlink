@@ -129,7 +129,8 @@ NetUplink::NetUplink(Config &cfg, const string &name, Rx *rx, Tx *tx,
     cfg(cfg), name(name), last_msg_timestamp(), heartbeat_timer(0),
     audio_enc(0), audio_dec(0), loopback_con(0), rx_splitter(0),
     tx_selector(0), state(STATE_DISC), mute_tx_timer(0), tx_muted(false),
-    fallback_enabled(false), tx_ctrl_mode(Tx::TX_OFF)
+    fallback_enabled(false), tx_ctrl_mode(Tx::TX_OFF), callsign("NOCALL"),
+    remote_call("NOCALL")
 {
   heartbeat_timer = new Timer(10000);
   heartbeat_timer->setEnable(false);
@@ -192,6 +193,7 @@ bool NetUplink::initialize(void)
   
   cfg.getValue(name, "FALLBACK_REPEATER", fallback_enabled, true);
   cfg.getValue(name, "AUTH_KEY", auth_key, true);
+  cfg.getValue(name, "CALLSIGN", callsign, true);
   
   int mute_tx_on_rx = -1;
   cfg.getValue(name, "MUTE_TX_ON_RX", mute_tx_on_rx, true);
@@ -474,6 +476,10 @@ void NetUplink::handleMsg(Msg *msg)
           sendMsg(ok_msg);
         }
         setState(STATE_READY);
+
+        // sending callsign to remote station
+        MsgCallsign *cs_msg = new MsgCallsign(callsign);
+        sendMsg(cs_msg);
       }
       else
       {
@@ -635,6 +641,14 @@ void NetUplink::handleMsg(Msg *msg)
       }
       break;
     } 
+    
+    case MsgCallsign::TYPE:
+    {
+      MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
+      remote_call = cs_msg->getCallsign();
+      cout << "Remotestation " << remote_call << cout;
+      break;  
+    }
     
     default:
       cerr << "*** ERROR: Unknown TCP message received in NetUplink "

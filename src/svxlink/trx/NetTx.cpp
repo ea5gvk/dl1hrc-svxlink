@@ -122,7 +122,8 @@ NetTx::NetTx(Config &cfg, const string& name)
   : cfg(cfg), name(name), tcp_con(0), log_disconnects_once(false),
     log_disconnect(true), is_transmitting(false), mode(Tx::TX_OFF),
     ctcss_enable(false), pacer(0), is_connected(false), pending_flush(false),
-    unflushed_samples(false), audio_enc(0)
+    unflushed_samples(false), audio_enc(0), remote_call("NOCALL"), 
+    own_call("NOCALL")
 {
 } /* NetTx::NetTx */
 
@@ -162,6 +163,7 @@ bool NetTx::initialize(void)
   
   string auth_key;
   cfg.getValue(name, "AUTH_KEY", auth_key);
+  cfg.getValue(name, "CALLSIGN", own_call);
   
   pacer = new AudioPacer(INTERNAL_SAMPLE_RATE, 512, 50);
   setHandler(pacer);
@@ -304,13 +306,17 @@ void NetTx::connectionReady(bool is_ready)
       }
     }
     sendMsg(msg);
+    
+    MsgCallsign *oc_msg = new MsgCallsign(own_call);
+    sendMsg(oc_msg);
   }
   else
   {
     if (log_disconnect)
     {
-      cout << name << ": Disconnected from remote transmitter at "
-          << tcp_con->remoteHost() << ":" << tcp_con->remotePort() << ": "
+      cout << name << ": Disconnected from remote transmitter (" << remote_call 
+          << ") at " << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
+          << ": "
           << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
           << "\n";
     }
@@ -349,7 +355,14 @@ void NetTx::handleMsg(Msg *msg)
       allEncodedSamplesFlushed();
       break;
     }
-    
+     
+    case MsgCallsign::TYPE:
+    {
+      MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
+      remote_call = cs_msg->getCallsign();
+      break;
+    }
+   
     /*
     default:
       cerr << name << ": *** ERROR: Unknown TCP message received. Type="
@@ -414,7 +427,7 @@ void NetTx::setIsTransmitting(bool is_transmitting)
 {
   if (is_transmitting != this->is_transmitting)
   {
-    cout << name << ": The transmitter is "
+    cout << name << ": The transmitter (" << remote_call << ") is "
       	 << (is_transmitting ? "ON" : "OFF") << endl;
     this->is_transmitting = is_transmitting;
     transmitterStateChange(is_transmitting);

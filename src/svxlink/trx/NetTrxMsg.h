@@ -428,6 +428,20 @@ class MsgAudio : public Msg
 }; /* MsgAudio */
 
 
+class MsgCallsign : public Msg
+{
+  public:
+    static const unsigned TYPE = 103;
+    MsgCallsign(std::string callsign)
+      : Msg(TYPE, sizeof(MsgCallsign)), m_callsign(callsign) {}
+
+  std::string getCallsign(void) const { return m_callsign; }
+  
+  private:
+    std::string m_callsign;
+
+}; /* NsgCallsign */
+
 
 
 /******************************** RX Messages ********************************/

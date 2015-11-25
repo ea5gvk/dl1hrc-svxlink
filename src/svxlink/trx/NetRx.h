@@ -203,6 +203,8 @@ class NetRx : public Rx
     bool      	      	unflushed_samples;
     bool      	      	sql_is_open;
     Async::AudioDecoder *audio_dec;
+    std::string         remote_call;
+    std::string         own_call;
     
     void connectionReady(bool is_ready);
     void handleMsg(NetTrxMsg::Msg *msg);

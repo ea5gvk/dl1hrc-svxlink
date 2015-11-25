@@ -134,7 +134,7 @@ NetRx::NetRx(Config &cfg, const string& name)
   : Rx(cfg, name), cfg(cfg), mute_state(Rx::MUTE_ALL), tcp_con(0),
     log_disconnects_once(false), log_disconnect(true),
     last_signal_strength(0.0), last_sql_rx_id(0), unflushed_samples(false),
-    sql_is_open(false), audio_dec(0)
+    sql_is_open(false), audio_dec(0), remote_call("NOCALL"), own_call("NOCALL")
 {
 } /* NetRx::NetRx */
 
@@ -187,6 +187,7 @@ bool NetRx::initialize(void)
   
   string auth_key;
   cfg.getValue(name(), "AUTH_KEY", auth_key);
+  cfg.getValue(name(), "CALLSIGN", own_call);
   
   audio_dec = AudioDecoder::create(audio_dec_name);
   if (audio_dec == 0)
@@ -373,13 +374,20 @@ void NetRx::connectionReady(bool is_ready)
     }
     cout << name() << ": Requesting CODEC \"" << msg->name() << "\"\n";
     sendMsg(msg);
+
+    cout << "1) MsgCallsign *oc_msg" << endl;
+    MsgCallsign *oc_msg = new MsgCallsign(own_call);
+    cout << "2) MsgCallsign *oc_msg" << endl;
+    sendMsg(oc_msg);
+    cout << "3) MsgCallsign *oc_msg" << endl;
   }
   else
   {
     if (log_disconnect)
     {
-      cout << name() << ": Disconnected from remote receiver "
-          << tcp_con->remoteHost() << ":" << tcp_con->remotePort() << ": "
+      cout << name() << ": Disconnected from remote receiver (" << remote_call 
+          << ") " << tcp_con->remoteHost() << ":" << tcp_con->remotePort() 
+          << ": " 
           << TcpConnection::disconnectReasonStr(tcp_con->disconnectReason())
           << "\n";
     }
@@ -480,6 +488,15 @@ void NetRx::handleMsg(Msg *msg)
         MsgSel5 *sel5_msg = reinterpret_cast<MsgSel5*>(msg);
         selcallSequenceDetected(sel5_msg->digits());
       }
+      break;
+    }
+    
+    case MsgCallsign::TYPE:
+    {
+      MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
+      cout << "1) MsgCallsign::TYPE:" << endl;
+      remote_call = cs_msg->getCallsign();
+      cout << "2) MsgCallsign::TYPE:" << remote_call << endl;
       break;
     }
 
