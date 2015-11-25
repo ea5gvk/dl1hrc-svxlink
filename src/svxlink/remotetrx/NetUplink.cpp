@@ -646,7 +646,7 @@ void NetUplink::handleMsg(Msg *msg)
     {
       MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
       remote_call = cs_msg->getCallsign();
-      cout << "Remotestation " << remote_call << cout;
+      cout << "Remotestation is " << remote_call << endl;
       break;  
     }
     

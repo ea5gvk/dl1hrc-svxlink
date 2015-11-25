@@ -491,9 +491,8 @@ void NetRx::handleMsg(Msg *msg)
     case MsgCallsign::TYPE:
     {
       MsgCallsign *cs_msg = reinterpret_cast<MsgCallsign*>(msg);
-      cout << "1) MsgCallsign::TYPE:" << endl;
       remote_call = cs_msg->getCallsign();
-      cout << "2) MsgCallsign::TYPE:" << remote_call << endl;
+      cout << "Remotestation is " << remote_call << endl;
       break;
     }
 

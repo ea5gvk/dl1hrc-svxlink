@@ -441,7 +441,7 @@ class MsgCallsign : public Msg
     setSize(size() - MAX_DESC + strlen(m_callsign));
   }
 
-  std::string getCallsign(void) const {return m_callsign; }   
+  std::string getCallsign(void) const { return m_callsign; }   
   
   private:
     char m_callsign[MAX_DESC + 1];
