@@ -483,6 +483,14 @@ bool LocalRxBase::initialize(void)
   prev_src->registerSink(voiceband_filter, true);
   prev_src = voiceband_filter;
 
+  string filterdesc;
+  if (cfg.getValue(name(), "AUDIO_FILTER", filterdesc))
+  {
+    AudioFilter *additional_audiofilter = new AudioFilter(filterdesc);
+    prev_src->registerSink(additional_audiofilter, true);
+    prev_src = additional_audiofilter;
+  }
+
     // Create an audio splitter to distribute the voiceband audio to all
     // other consumers
   AudioSplitter *voiceband_splitter = new AudioSplitter;
