@@ -1209,6 +1209,14 @@ The sample rate is the same as the one chosen for the audio device.
 The destination is specified as ip-address:port.
 
 Example: RAW_AUDIO_UDP_DEST=127.0.0.1:10000
+.TP
+.B AUDIO_FILTER
+Define an audio filter here to improve the frequency response caused by
+unfavorable hardware in the audio path from discriminator to the soundcard
+input. A lot of audio filters are available (Butterworth, Chebyshev, Lowpass,
+Highpass, ...). Look into the src/async/audio/fidlib.c for more information.
+
+Example: AUDIO_FILTER=HsBq1/0.01/-18/3500
 .
 .SS Ddr Receiver Section
 .
@@ -1725,6 +1733,14 @@ gain for all transmitted sound if it's not possible to do using the normal
 sound card hardware gain controls. The gain should be given in dB and can
 be both positive and negative.
 .
+.TP
+.B AUDIO_FILTER
+Define an audio filter here to improve the frequency response caused by
+unfavorable hardware in the audio path from discriminator to the soundcard
+input. A lot of audio filters are available (Butterworth, Chebyshev, Lowpass,
+Highpass, ...). Look into the src/async/audio/fidlib.c for more information.
+
+Example: AUDIO_FILTER=HsBq1/0.01/-18/3500
 .SS Networked Transmitter Section
 .
 A networked transmitter section is used to specify the configuration for a
