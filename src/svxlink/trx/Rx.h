@@ -234,6 +234,27 @@ class Rx : public sigc::trackable, public Async::AudioSource
     sigc::signal<void, std::string> selcallSequenceDetected;
 
     /**
+     * @brief   A signal that is emitted when a valid Afsk message has been
+                detected
+     * @param   sequence of the Afsk path, payload
+     */
+    sigc::signal<void, std::string, std::string> afskMessageDetected;
+
+    /**
+     * @brief   A signal that is emitted when a valid Fms message has been
+                detected
+     * @param   Fms message
+     */
+    sigc::signal<void, std::string> fmsMessageDetected;
+
+    /**
+     * @brief   A signal that is emitted when a valid Mdc message has been
+                detected
+     * @param   Mdc message
+     */
+    sigc::signal<void, std::string> mdcMessageDetected;
+
+    /**
      * @brief 	A signal that is emitted when a previously specified tone has
      *	      	been detected for the specified duration
      * @param 	fq The frequency of the tone

@@ -254,6 +254,9 @@ class LocalRxBase : public Rx
     void onSignalLevelUpdated(float siglev);
     void setSqlHangtimeFromSiglev(float siglev);
     void rxReadyStateChanged(void);
+    void afskDetected(std::string aprs_message, std::string payload);
+    void fmsDetected(std::string fms_message);
+    void mdcDetected(std::string mdc_message);
 
 };  /* class LocalRxBase */
 

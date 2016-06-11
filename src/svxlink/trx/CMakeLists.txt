@@ -16,7 +16,9 @@ set(LIBSRC
   PttGpio.cpp PttSerialPin.cpp PttPty.cpp
   PtyDtmfDecoder.cpp LocalRxBase.cpp Ddr.cpp RtlSdr.cpp RtlTcp.cpp
   WbRxRtlSdr.cpp SigLevDet.cpp SigLevDetDdr.cpp
-  SvxSwDtmfDecoder.cpp LocalRxSim.cpp SigLevDetSim.cpp
+  SvxSwDtmfDecoder.cpp LocalRxSim.cpp SigLevDetSim.cpp 
+  AfskDecoder.cpp SwAfskDecoder.cpp MdcDecoder.cpp SwMdcDecoder.cpp
+  FmsDecoder.cpp SwFmsDecoder.cpp
 )
 include (CheckSymbolExists)
 CHECK_SYMBOL_EXISTS(HIDIOCGRAWINFO linux/hidraw.h HAS_HIDRAW_SUPPORT)

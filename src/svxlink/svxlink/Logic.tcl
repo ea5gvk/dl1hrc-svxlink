@@ -401,6 +401,29 @@ proc dtmf_cmd_received {cmd} {
 
 
 #
+# Executed whe an Afsk message has been received
+#
+proc afsk_message_received {message} {
+  puts "Afsk message received: $message"
+}
+
+
+#
+# Executed whe an Fms message has been received
+#
+proc fms_message_received {message} {
+  puts "Fms message received: $message"
+}
+
+
+#
+# Executed whe an Mdc message has been received
+#
+proc mdc_message_received {message} {
+  puts "Mdc message received: $message"
+}
+
+#
 # Executed once every whole minute. Don't put any code here directly
 # Create a new function and add it to the timer tick subscriber list
 # by using the function addTimerTickSubscriber.

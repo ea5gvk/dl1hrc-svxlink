@@ -375,6 +375,9 @@ bool Logic::initialize(void)
   rx().dtmfDigitDetected.connect(mem_fun(*this, &Logic::dtmfDigitDetectedP));
   rx().selcallSequenceDetected.connect(
 	mem_fun(*this, &Logic::selcallSequenceDetected));
+  rx().afskMessageDetected.connect(mem_fun(*this, &Logic::afskMessageDetected));
+  rx().fmsMessageDetected.connect(mem_fun(*this, &Logic::fmsMessageDetected));
+  rx().mdcMessageDetected.connect(mem_fun(*this, &Logic::mdcMessageDetected));
   rx().setMuteState(Rx::MUTE_NONE);
   rx().publishStateEvent.connect(mem_fun(*this, &Logic::publishStateEvent));
   prev_rx_src = m_rx;
@@ -823,6 +826,40 @@ void Logic::selcallSequenceDetected(std::string sequence)
          << "\" out of defined range\n";
   }
 } /* Logic::selcallSequenceDetected */
+
+
+void Logic::afskMessageDetected(std::string aprs_message, std::string payload)
+{
+
+   if (LocationInfo::has_instance())
+   {
+      string mycall = LocationInfo::instance()->getCallsign();
+      string message= aprs_message + "," + mycall
+                        + ":" + payload;
+      LocationInfo::instance()->igateMessage(message);
+      cout << "igate: " << message;
+
+      stringstream ss;
+      ss << "afsk_message_received " << message;
+      processEvent(ss.str());
+   }
+} /* Logic::afskMessageDetected */
+
+
+void Logic::fmsMessageDetected(std::string fms_message)
+{
+   stringstream ss;
+   ss << "fms_message_received " << fms_message;
+   processEvent(ss.str());
+} /* Logic::fmsMessageDetected */
+
+
+void Logic::mdcMessageDetected(std::string mdc_message)
+{
+   stringstream ss;
+   ss << "mdc_message_received " << mdc_message;
+   processEvent(ss.str());
+} /* Logic::mdcMessageDetected */
 
 
 void Logic::sendDtmf(const std::string& digits)

@@ -87,6 +87,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #ifdef HAS_HIDRAW_SUPPORT
 #include "SquelchHidraw.h"
 #endif
+#include "AfskDecoder.h"
+#include "MdcDecoder.h"
+#include "FmsDecoder.h"
 
 
 /****************************************************************************
@@ -533,6 +536,48 @@ bool LocalRxBase::initialize(void)
     voiceband_splitter->addSink(sel5_dec, true);
   }
 
+  string afsk_det_str;
+  if (cfg.getValue(name(), "AFSK_DEC_TYPE", afsk_det_str))
+  {
+    AfskDecoder *afsk_dec = AfskDecoder::create(cfg, name());
+    if (afsk_dec == 0 || !afsk_dec->initialize())
+    {
+      cerr << "*** ERROR: Afsk decoder initialization failed for RX \""
+          << name() << "\"\n";
+      return false;
+    }
+    afsk_dec->afskDetected.connect(mem_fun(*this, &LocalRxBase::afskDetected));
+    voiceband_splitter->addSink(afsk_dec, true);
+  }
+
+  string fms_det_str;
+  if (cfg.getValue(name(), "FMS_DEC_TYPE", fms_det_str))
+  {
+    FmsDecoder *fms_dec = FmsDecoder::create(cfg, name());
+    if (fms_dec == 0 || !fms_dec->initialize())
+    {
+      cerr << "*** ERROR: Fms decoder initialization failed for RX \""
+          << name() << "\"\n";
+      return false;
+    }
+    fms_dec->fmsDetected.connect(mem_fun(*this, &LocalRxBase::fmsDetected));
+    voiceband_splitter->addSink(fms_dec, true);
+  }
+
+  string mdc_det_str;
+  if (cfg.getValue(name(), "MDC_DEC_TYPE", mdc_det_str))
+  {
+    MdcDecoder *mdc_dec = MdcDecoder::create(cfg, name());
+    if (mdc_dec == 0 || !mdc_dec->initialize())
+    {
+      cerr << "*** ERROR: Mdc decoder initialization failed for RX \""
+          << name() << "\"\n";
+      return false;
+    }
+    mdc_dec->mdcDetected.connect(mem_fun(*this, &LocalRxBase::mdcDetected));
+    voiceband_splitter->addSink(mdc_dec, true);
+  }
+
     // Create an audio valve to use as squelch and connect it to the splitter
   sql_valve = new AudioValve;
   sql_valve->setOpen(false);
@@ -723,6 +768,24 @@ void LocalRxBase::sel5Detected(std::string sequence)
     selcallSequenceDetected(sequence);
   }
 } /* LocalRxBase::sel5Detected */
+
+
+void LocalRxBase::afskDetected(string aprs_message, string payload)
+{
+  afskMessageDetected(aprs_message, payload);
+} /* LocalRxBase::afskDetected */
+
+
+void LocalRxBase::fmsDetected(string fms_message)
+{
+  fmsMessageDetected(fms_message);
+} /* LocalRxBase::fmsDetected */
+
+
+void LocalRxBase::mdcDetected(string mdc_message)
+{
+  mdcMessageDetected(mdc_message);
+} /* LocalRxBase::mdcDetected */
 
 
 void LocalRxBase::dtmfDigitActivated(char digit)
