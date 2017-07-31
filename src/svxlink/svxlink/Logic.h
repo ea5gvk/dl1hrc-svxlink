@@ -10,7 +10,7 @@ specific logic core classes (e.g. SimplexLogic and RepeaterLogic).
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2004-2015  Tobias Blomberg / SM0SVX
+Copyright (C) 2004-2017  Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -173,8 +173,10 @@ class Logic : public sigc::trackable
     virtual void playFile(const std::string& path);
     virtual void playSilence(int length);
     virtual void playTone(int fq, int amp, int len);
+    virtual void playDtmf(const std::string& digits, int amp, int len);
     void recordStart(const std::string& filename, unsigned max_time);
     void recordStop(void);
+    void injectDtmf(const std::string& digits, int len);
 
     virtual bool activateModule(Module *module);
     virtual void deactivateModule(Module *module);
@@ -218,6 +220,7 @@ class Logic : public sigc::trackable
     virtual bool getIdleState(void) const;
     virtual void transmitterStateChange(bool is_transmitting);
     virtual void selcallSequenceDetected(std::string sequence);
+    virtual void dtmfCtrlPtyCmdReceived(const void *buf, size_t count);
 
     void clearPendingSamples(void);
     void enableRgrSoundTimer(bool enable);
@@ -286,7 +289,9 @@ class Logic : public sigc::trackable
     std::string                     online_cmd;
     DtmfDigitHandler                *dtmf_digit_handler;
     Async::Pty                      *state_pty;
-    std::map<int, float>           tx_ctcss_rx;
+    Async::Pty                      *dtmf_ctrl_pty;
+    std::map<int, float>            tx_ctcss_rx;
+
 
     void loadModules(void);
     void loadModule(const std::string& module_name);
