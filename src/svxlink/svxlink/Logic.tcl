@@ -52,6 +52,11 @@ variable second_tick_subscribers [list];
 variable sql_rx_id "?";
 
 #
+# Contains the signal level of the last receiver that indicated squelch activity
+#
+variable sql_level 0;
+
+#
 # Executed when the SvxLink software is started
 #
 proc startup {} {
@@ -183,12 +188,15 @@ proc send_long_ident {hour minute} {
 #
 proc send_rgr_sound {} {
   variable sql_rx_id
+  variable sql_level
+
+  set rgrtone [300 + 2 * $sql_level]
 
   if {$sql_rx_id != "?"} {
     # 150 CPM, 1000 Hz, -4 dBFS
     CW::play $sql_rx_id 150 1000 -4
   } else {
-    playTone 440 500 100
+    playTone $rgrtone 500 100
   }
   playSilence 100
 }
@@ -338,10 +346,11 @@ proc transmit {is_on} {
 #   rx_id   - The ID of the RX that the squelch opened/closed on
 #   is_open - Set to 1 if the squelch is open or 0 if it's closed
 #
-proc squelch_open {rx_id is_open} {
+proc squelch_open {rx_id is_open level} {
   variable sql_rx_id;
   #puts "The squelch is $is_open on RX $rx_id";
   set sql_rx_id $rx_id;
+  set sql_level $level;
 }
 
 

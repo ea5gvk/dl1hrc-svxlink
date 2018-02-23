@@ -1,6 +1,10 @@
  1.7.0 -- ?? ??? 2018
 ----------------------
 
+* The tone heigh of the roger beep is depending from the signal level of the 
+  last received station. A signal level detector should used for a correct 
+  and meaningfil function.
+
 * Now possible to set the roger sound to be always on in the SimplexLogic, even
   when no module is active. Use the RGR_SOUND_ALWAYS configuration variable to
   enable the feature.
