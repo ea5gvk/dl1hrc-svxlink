@@ -49,7 +49,7 @@ variable second_tick_subscribers [list];
 #
 # Contains the ID of the last receiver that indicated squelch activity
 #
-variable sql_rx_id "?";
+variable sql_rx_id "0";
 
 #
 # Contains the signal level of the last receiver that indicated squelch activity
@@ -190,7 +190,7 @@ proc send_rgr_sound {} {
   variable sql_rx_id
   variable sql_level
 
-  set rgrtone [300 + 2 * $sql_level]
+  set rgrtone [expr {300 + 3 * $sql_level}]
 
   if {$sql_rx_id != "?"} {
     # 150 CPM, 1000 Hz, -4 dBFS
