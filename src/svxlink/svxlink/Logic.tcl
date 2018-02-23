@@ -190,13 +190,14 @@ proc send_rgr_sound {} {
   variable sql_rx_id
   variable sql_level
 
-  set rgrtone [expr {300 + 3 * $sql_level}]
+  set rgrtone [expr {300 + 3 * int($sql_level)}]
 
   if {$sql_rx_id != "?"} {
     # 150 CPM, 1000 Hz, -4 dBFS
     CW::play $sql_rx_id 150 1000 -4
   } else {
     playTone $rgrtone 500 100
+    puts "playTone $rgrtone 500 100"
   }
   playSilence 100
 }
@@ -348,9 +349,12 @@ proc transmit {is_on} {
 #
 proc squelch_open {rx_id is_open level} {
   variable sql_rx_id;
+  variable sql_level;
   #puts "The squelch is $is_open on RX $rx_id";
   set sql_rx_id $rx_id;
-  set sql_level $level;
+  if {$is_open == 1} {
+    set sql_level $level;
+  }
 }
 
 
