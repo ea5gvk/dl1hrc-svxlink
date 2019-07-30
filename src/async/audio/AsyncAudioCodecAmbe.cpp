@@ -17,6 +17,7 @@
 using namespace Async;
 using namespace std;
 
+// namespace AudioCodecAmbe
 namespace {
     /*
         Multiton pattern template. It's similar to the singleton pattern, but
@@ -562,8 +563,8 @@ namespace {
           cerr << "*** ERROR: Can not open device " << device << endl;
           throw;
         }
-        serial->charactersReceived.connect(
-             sigc::mem_fun(*this, &AudioCodecAmbeDv3kTty::callbackTty));
+          serial->charactersReceived.connect(
+               mem_fun(*this, &AudioCodecAmbeDv3kTty::callbackTty));
         init();
       }
 

@@ -10,7 +10,7 @@ specific logic core classes (e.g. SimplexLogic and RepeaterLogic).
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2004-2017  Tobias Blomberg / SM0SVX
+Copyright (C) 2004-2018  Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -214,6 +214,7 @@ class Logic : public LogicBase
     virtual bool getIdleState(void) const;
     virtual void transmitterStateChange(bool is_transmitting);
     virtual void selcallSequenceDetected(std::string sequence);
+    virtual void dtmfCtrlPtyCmdReceived(const void *buf, size_t count);
 
     void clearPendingSamples(void);
     void enableRgrSoundTimer(bool enable);
@@ -252,6 +253,7 @@ class Logic : public LogicBase
     Async::AudioSplitter	    *logic_con_in;
     CmdParser 	      	      	    cmd_parser;
     Async::AtTimer      	    every_minute_timer;
+    Async::AtTimer      	    every_second_timer;
     Async::AudioRecorder  	    *recorder;
     Async::AudioMixer	      	    *tx_audio_mixer;
     Async::AudioAmp   	      	    *fx_gain_ctrl;
@@ -290,7 +292,9 @@ class Logic : public LogicBase
     void putCmdOnQueue(void);
     void sendRgrSound(void);
     void timeoutNextMinute(void);
+	void timeoutNextSecond(void);
     void everyMinute(Async::AtTimer *t);
+	void everySecond(Async::AtTimer *t);
     void checkIfOnlineCmd(void);
     void dtmfDigitDetectedP(char digit, int duration);
     void cleanup(void);
@@ -299,7 +303,6 @@ class Logic : public LogicBase
     void audioFromModuleStreamStateChanged(bool is_active, bool is_idle);
     void publishStateEvent(const std::string &event_name,
                            const std::string &msg);
-    void dtmfCtrlPtyCmdReceived(const void *buf, size_t count);
 
 };  /* class Logic */
 

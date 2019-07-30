@@ -555,7 +555,7 @@ void RewindLogic::sendEncodedAudio(const void *buf, int count)
   fdata->type   = htole16(REWIND_TYPE_DMR_AUDIO_FRAME);
   fdata->flags  = htole16(REWIND_FLAG_NONE);         // 0x00
   fdata->length = htole16(REWIND_DMR_AUDIO_FRAME_LENGTH);
-  memcpy(fdata->data, htole16(bufdata), count);
+  memcpy(fdata->data, bufdata, count);
   
   sendMsg(fdata, fsize);
 } /* RewindLogic::sendEncodedAudio */

@@ -10,7 +10,7 @@ specific logic core classes (e.g. SimplexLogic and RepeaterLogic).
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2003-2017 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2018 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -268,7 +268,7 @@ bool Logic::initialize(void)
     if (!state_pty->open())
     {
       cerr << "*** ERROR: Could not open state PTY "
-           << state_pty_path << " as spcified in configuration variable "
+           << state_pty_path << " as specified in configuration variable "
            << name() << "/" << "STATE_PTY" << endl;
       cleanup();
       return false;
@@ -283,7 +283,7 @@ bool Logic::initialize(void)
     if (!dtmf_ctrl_pty->open())
     {
       cerr << "*** ERROR: Could not open control PTY "
-           << dtmf_ctrl_pty_path << " as spcified in configuration variable "
+           << dtmf_ctrl_pty_path << " as specified in configuration variable "
            << name() << "/" << "DTMF_CTRL_PTY" << endl;
       cleanup();
       return false;
@@ -557,7 +557,7 @@ bool Logic::initialize(void)
   }
   tx().transmitterStateChange.connect(
       mem_fun(*this, &Logic::transmitterStateChange));
-  prev_tx_src->registerSink(m_tx, true);
+  prev_tx_src->registerSink(m_tx);
   prev_tx_src = 0;
 
     // Create the message handler
@@ -579,7 +579,7 @@ bool Logic::initialize(void)
   tx_audio_mixer->addSource(msg_pacer);
   prev_tx_src = 0;
 
-  event_handler = new EventHandler(event_handler_str, this);
+  event_handler = new EventHandler(event_handler_str, name());
   event_handler->playFile.connect(mem_fun(*this, &Logic::playFile));
   event_handler->playSilence.connect(mem_fun(*this, &Logic::playSilence));
   event_handler->playTone.connect(mem_fun(*this, &Logic::playTone));
@@ -645,6 +645,11 @@ bool Logic::initialize(void)
   timeoutNextMinute();
   every_minute_timer.start();
 
+  every_second_timer.setExpireOffset(100);
+  every_second_timer.expired.connect(mem_fun(*this, &Logic::everySecond));
+  timeoutNextSecond();
+  every_second_timer.start();
+  
   dtmf_digit_handler = new DtmfDigitHandler;
   dtmf_digit_handler->commandComplete.connect(
       mem_fun(*this, &Logic::putCmdOnQueue));
@@ -805,6 +810,11 @@ void Logic::deactivateModule(Module *module)
 
 Module *Logic::findModule(int id)
 {
+  if (id < 0)
+  {
+    return 0;
+  }
+
   list<Module *>::iterator it;
   for (it=modules.begin(); it!=modules.end(); ++it)
   {
@@ -993,6 +1003,21 @@ void Logic::transmitterStateChange(bool is_transmitting)
   ss << "transmit " << (is_transmitting ? "1" : "0");
   processEvent(ss.str());
 } /* Logic::transmitterStateChange */
+
+
+void Logic::dtmfCtrlPtyCmdReceived(const void *buf, size_t count)
+{
+  const char *buffer = reinterpret_cast<const char*>(buf);
+  for (size_t i=0; i<count; ++i)
+  {
+    const char &ch = buffer[i];
+    if (::isdigit(ch) || (ch == '*') || (ch == '#') ||
+        ((ch >= 'A') && (ch <= 'F')))
+    {
+      dtmfDigitDetectedP(ch, 100);
+    }
+  }
+} /* Logic::dtmfCtrlPtyCmdReceived */
 
 
 void Logic::clearPendingSamples(void)
@@ -1214,20 +1239,23 @@ void Logic::loadModule(const string& module_cfg_name)
     return;
   }
 
-  stringstream ss;
-  ss << module->id();
-  ModuleActivateCmd *cmd = new ModuleActivateCmd(&cmd_parser, ss.str(), this);
-  if (!cmd->addToParser())
+  if (module->id() >= 0)
   {
-    cerr << "\n*** ERROR: Failed to add module activation command for module \""
-	 << module_cfg_name << "\" in logic \"" << name() << "\". "
-         << "This is probably due to having set up two modules with the same "
-         << "module id or choosing a module id that is the same as another "
-         << "command.\n\n";
-    delete cmd;
-    delete module;
-    dlclose(handle);
-    return;
+    stringstream ss;
+    ss << module->id();
+    ModuleActivateCmd *cmd = new ModuleActivateCmd(&cmd_parser, ss.str(), this);
+    if (!cmd->addToParser())
+    {
+      cerr << "\n*** ERROR: Failed to add module activation command for "
+           << "module \"" << module_cfg_name << "\" in logic \"" << name()
+           << "\". This is probably due to having set up two modules with the "
+           << "same module id or choosing a module id that is the same as "
+           << "another command.\n\n";
+      delete cmd;
+      delete module;
+      dlclose(handle);
+      return;
+    }
   }
 
     // Connect module audio output to the module audio selector
@@ -1245,11 +1273,13 @@ void Logic::loadModule(const string& module_cfg_name)
 
 void Logic::unloadModules(void)
 {
+  deactivateModule(0);
   list<Module *>::iterator it;
   for (it=modules.begin(); it!=modules.end(); ++it)
   {
-    void *plugin_handle = (*it)->pluginHandle();
-    delete *it;
+    Module *module = *it;
+    void *plugin_handle = module->pluginHandle();
+    delete module;
     dlclose(plugin_handle);
   }
   modules.clear();
@@ -1470,6 +1500,23 @@ void Logic::everyMinute(AtTimer *t)
 } /* Logic::everyMinute */
 
 
+void Logic::timeoutNextSecond(void)
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  struct tm *tm = localtime(&tv.tv_sec);
+  tm->tm_sec += 1;
+  every_second_timer.setTimeout(*tm);
+} /* Logic::timeoutNextSecond */
+
+
+void Logic::everySecond(AtTimer *t)
+{
+  processEvent("every_second");
+  timeoutNextSecond();
+} /* Logic::everySecond */
+
+
 void Logic::dtmfDigitDetectedP(char digit, int duration)
 {
   cout << name() << ": digit=" << digit << endl;
@@ -1490,6 +1537,10 @@ void Logic::dtmfDigitDetectedP(char digit, int duration)
 
   dtmfDigitDetected(digit, duration);
 
+  if (dtmf_ctrl_pty != 0)
+  {
+    dtmf_ctrl_pty->write(&digit, 1);
+  }
 } /* Logic::dtmfDigitDetectedP */
 
 
@@ -1515,7 +1566,11 @@ void Logic::cleanup(void)
     tx().setTxCtrlMode(Tx::TX_OFF);
   }
 
-  delete event_handler;       	      event_handler = 0;
+  if (m_rx != 0)
+  {
+    m_rx->reset();
+  }
+
   unloadModules();
   exec_cmd_on_sql_close_timer.setEnable(false);
   rgr_sound_timer.setEnable(false);
@@ -1526,9 +1581,10 @@ void Logic::cleanup(void)
     LinkManager::instance()->deleteLogic(this);
   }
 
-  delete msg_handler; 	      	      msg_handler = 0;
+  delete event_handler;               event_handler = 0;
   delete m_tx;        	      	      m_tx = 0;
   delete m_rx;        	      	      m_rx = 0;
+  delete msg_handler; 	      	      msg_handler = 0;
   delete audio_to_module_selector;    audio_to_module_selector = 0;
   delete tx_audio_selector;   	      tx_audio_selector = 0;
   delete audio_from_module_selector;  audio_from_module_selector = 0;
@@ -1582,21 +1638,6 @@ void Logic::publishStateEvent(const string &event_name, const string &msg)
   os << endl;
   state_pty->write(os.str().c_str(), os.str().size());
 } /* Logic::publishStateEvent */
-
-
-void Logic::dtmfCtrlPtyCmdReceived(const void *buf, size_t count)
-{
-  const char *buffer = reinterpret_cast<const char*>(buf);
-  for (size_t i=0; i<count; ++i)
-  {
-    const char &ch = buffer[i];
-    if (::isdigit(ch) || (ch == '*') || (ch == '#') ||
-        ((ch >= 'A') && (ch <= 'F')))
-    {
-      dtmfDigitDetectedP(ch, 100);
-    }
-  }
-} /* Logic::dtmfCtrlPtyCmdReceived */
 
 
 /*

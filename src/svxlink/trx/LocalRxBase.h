@@ -10,7 +10,7 @@ the SvxLink core is running. It can also be a DDR (Digital Drop Receiver).
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2003-2014 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2019 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -40,6 +40,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ****************************************************************************/
 
 #include <sys/time.h>
+#include <stdint.h>
+#include <vector>
 
 
 /****************************************************************************
@@ -76,6 +78,7 @@ namespace Async
 };
 
 class Squelch;
+class HdlcDeframer;
 
 
 /****************************************************************************
@@ -171,7 +174,13 @@ class LocalRxBase : public Rx
      * @return	Returns the signal strength
      */
     virtual float signalStrength(void) const;
-    
+
+    /**
+     * @brief 	Find out RX ID of last receiver with squelch activity
+     * @returns Returns the RX ID
+     */
+    char sqlRxId(void) const;
+
     /**
      * @brief 	Reset the receiver object to its default settings
      */
@@ -243,9 +252,14 @@ class LocalRxBase : public Rx
     unsigned                    sql_extended_hangtime_thresh;
     Async::AudioFifo            *input_fifo;
     int                         dtmf_muting_pre;
-    
+    HdlcDeframer *              ob_afsk_deframer;
+    HdlcDeframer *              ib_afsk_deframer;
+    bool                        audio_dev_keep_open;
+
     int audioRead(float *samples, int count);
     void dtmfDigitActivated(char digit);
+    void dataFrameReceived(std::vector<uint8_t> frame);
+    void dataFrameReceivedIb(std::vector<uint8_t> frame);
     void dtmfDigitDeactivated(char digit, int duration_ms);
     void sel5Detected(std::string sequence);
     void audioStreamStateChange(bool is_active, bool is_idle);

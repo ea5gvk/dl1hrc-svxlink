@@ -5,7 +5,7 @@ set(MODNAME MetarInfo)
 #set(MODSRC xyz.cpp)
 
 # Project libraries to link to
-#set(LIBS ${LIBS} echolib)
+set(LIBS ${LIBS} ${CURL_LIBRARY})
 
 # The version tag name without the VER_ prefix
 set(VERNAME ${MODNAME})
@@ -22,6 +22,7 @@ add_library(Module${MODNAME} MODULE Module${MODNAME}.cpp ${MODSRC}
   ${VERSION_DEPENDS}
 )
 set_target_properties(Module${MODNAME} PROPERTIES PREFIX "")
+set_property(TARGET Module${MODNAME} PROPERTY NO_SONAME 1)
 target_link_libraries(Module${MODNAME} ${LIBS})
 
 # Install targets

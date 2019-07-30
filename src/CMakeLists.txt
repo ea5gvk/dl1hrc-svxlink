@@ -64,6 +64,12 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     "${CMAKE_CXX_FLAGS} -Wall -Wpointer-arith")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+
+  option(USE_GPROF "Enable profiling" OFF)
+  if(USE_GPROF)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+  endif(USE_GPROF)
 endif()
 
 # Set the default build type to Release
@@ -328,7 +334,7 @@ set(LIBS ${LIBS} ${SIGC2_LIBRARIES})
 include(FindCHOWN)
 
 set(SVXLINK_USER "svxlink" CACHE STRING "Set SvxLink system user")
-set(SVXLINK_GROUP "daemon" CACHE STRING "Set SvxLink system group")
+set(SVXLINK_GROUP "svxlink" CACHE STRING "Set SvxLink system group")
 message(STATUS "SvxLink user = ${SVXLINK_USER}")
 message(STATUS "SvxLink group = ${SVXLINK_GROUP}")
 
@@ -342,3 +348,30 @@ if(USE_QT)
   add_subdirectory(qtel)
 endif(USE_QT)
 add_subdirectory(doc)
+
+# Experimental CPack package building
+set(CPACK_SET_DESTDIR "ON")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+  "Advanced voice services system for ham radio use")
+execute_process(
+  COMMAND git describe --tags
+  COMMAND tr - .
+  COMMAND tr -d '\n'
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  OUTPUT_VARIABLE CPACK_PACKAGE_VERSION
+  ERROR_QUIET)
+if (NOT CPACK_PACKAGE_VERSION)
+  set(CPACK_PACKAGE_VERSION "${VER_PROJECT}")
+endif()
+message(STATUS "Package Version = ${CPACK_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION
+  "The SvxLink project develops an advanced voice services system for ham radio use. It can be run on a simplex frequency or act as a repeater controller.")
+set(CPACK_PACKAGE_VENDOR "SM0SVX")
+set(CPACK_PACKAGE_CONTACT
+  "SvxLink Community <svxlink-devel@lists.sourceforge.net>")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/../COPYRIGHT")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/../README.adoc")
+
+#set(CPACK_GENERATOR "DEB")
+
+include(CPack)

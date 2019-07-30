@@ -49,17 +49,18 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ****************************************************************************/
 
 #include "AsyncAudioEncoder.h"
+#include "AsyncAudioEncoderDummy.h"
 #include "AsyncAudioEncoderNull.h"
 #include "AsyncAudioEncoderRaw.h"
 #include "AsyncAudioEncoderS16.h"
 #include "AsyncAudioEncoderGsm.h"
-#include "AsyncAudioEncoderAmbe.h"
 #ifdef SPEEX_MAJOR
 #include "AsyncAudioEncoderSpeex.h"
 #endif
 #ifdef OPUS_MAJOR
 #include "AsyncAudioEncoderOpus.h"
 #endif
+#include "AsyncAudioEncoderAmbe.h"
 
 
 /****************************************************************************
@@ -120,11 +121,30 @@ using namespace Async;
  *
  ****************************************************************************/
 
-AudioEncoder *AudioEncoder::create(const std::string &name, const std::map<std::string,std::string> &options)
+bool AudioEncoder::isAvailable(const std::string &name)
+{
+  return (name == "NULL") || (name == "RAW") || (name == "S16") ||
+         (name == "GSM") || (name == "AMBE") ||
+#ifdef SPEEX_MAJOR
+         (name == "SPEEX") ||
+#endif
+#ifdef OPUS_MAJOR
+         (name == "OPUS") ||
+#endif
+         (name == "DUMMY");
+} /* AudioEncoder::isAvailable */
+
+
+AudioEncoder *AudioEncoder::create(const std::string &name, 
+               const std::map<std::string,std::string> &options)
 {
   if (name == "NULL")
   {
     return new AudioEncoderNull;
+  }
+  else if (name == "DUMMY")
+  {
+    return new AudioEncoderDummy;
   }
   else if (name == "RAW")
   {
@@ -138,10 +158,6 @@ AudioEncoder *AudioEncoder::create(const std::string &name, const std::map<std::
   {
     return new AudioEncoderGsm;
   }
-  else if (name == "AMBE")
-  {
-    return AudioCodecAmbe::create(options);
-  }
 #ifdef SPEEX_MAJOR
   else if (name == "SPEEX")
   {
@@ -154,27 +170,15 @@ AudioEncoder *AudioEncoder::create(const std::string &name, const std::map<std::
     return new AudioEncoderOpus(options);
   }
 #endif
+  else if (name == "AMBE")
+  {
+    return AudioCodecAmbe::create(options);
+  }
   else
   {
-    return NULL;
+    return 0;
   }
 } /* AudioEncoder::create */
-
-
-
-#if 0
-AudioEncoder::AudioEncoder(void)
-{
-
-} /* AudioEncoder::AudioEncoder */
-
-
-AudioEncoder::~AudioEncoder(void)
-{
-
-} /* AudioEncoder::~AudioEncoder */
-#endif
-
 
 
 /****************************************************************************
@@ -184,9 +188,10 @@ AudioEncoder::~AudioEncoder(void)
  ****************************************************************************/
 
 void AudioEncoder::setOptions(const Options &options) {
-    for(Options::const_iterator it = options.begin(); it != options.end(); ++it) {
-        setOption(it->first,it->second);
-    }
+  for(Options::const_iterator it = options.begin(); it != options.end(); ++it) 
+  {
+    setOption(it->first,it->second);
+  }
 }
 
 /****************************************************************************
@@ -200,3 +205,4 @@ void AudioEncoder::setOptions(const Options &options) {
 /*
  * This file has not been truncated
  */
+

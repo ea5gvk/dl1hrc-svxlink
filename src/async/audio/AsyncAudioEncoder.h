@@ -6,7 +6,7 @@
 
 \verbatim
 Async - A library for programming event driven applications
-Copyright (C) 2003-2008 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2017 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <sigc++/sigc++.h>
 #include <string>
 #include <map>
+
 
 /****************************************************************************
  *
@@ -110,13 +111,24 @@ namespace Async
 
 This is the base class for implementing an audio encoder.
 */
-class AudioEncoder : public AudioSink, virtual public sigc::trackable
+class AudioEncoder : public AudioSink, public virtual sigc::trackable
 {
   public:
+
     typedef std::map<std::string,std::string> Options;
 
-    static AudioEncoder *create(const std::string &name, const Options &options);
+    /**
+     * @brief   Check if a specific encoder is available
+     * @param   name The name of the encoder to look for
+     */
+    static bool isAvailable(const std::string &name);
 
+    /**
+     * @brief   Create a new encoder of the specified type
+     * @param   name The name of the encoder to create
+     */
+    static AudioEncoder *create(const std::string &name, const Options &options);
+    
     /**
      * @brief 	Default constuctor
      */
@@ -132,7 +144,7 @@ class AudioEncoder : public AudioSink, virtual public sigc::trackable
      * @returns Return the name of the codec
      */
     virtual const char *name(void) const = 0;
-
+    
     /**
      * @brief Print codec parameter settings
      */
@@ -152,7 +164,7 @@ class AudioEncoder : public AudioSink, virtual public sigc::trackable
      * This function is normally only called from a connected source object.
      */
     virtual void flushSamples(void) { flushEncodedSamples(); }
-
+    
     /**
      * @brief 	A signal emitted when encoded samples are available
      * @param 	buf  Buffer containing encoded samples
@@ -167,6 +179,7 @@ class AudioEncoder : public AudioSink, virtual public sigc::trackable
     
   
   protected:
+
     /**
      * @brief 	Set an option for the encoder
      * @param 	name The name of the option
@@ -180,7 +193,7 @@ class AudioEncoder : public AudioSink, virtual public sigc::trackable
      * @param 	value The value of the option
      */
     virtual void setOptions(const Options &options);
-
+    
   private:
     AudioEncoder(const AudioEncoder&);
     AudioEncoder& operator=(const AudioEncoder&);

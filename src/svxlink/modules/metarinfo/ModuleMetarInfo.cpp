@@ -1,15 +1,15 @@
 /*
 @file	 ModuleMetarInfo.cpp
 @brief   gives out a METAR report
-@author  Adi Bier / DL1HRC
-@date	 2009-10-14
+@author  Steve Koehler / DH1DM & Adi Bier / DL1HRC
+@date	 2018-03-10
 
 \verbatim
 A module (plugin) to request the latest METAR (weather) information from
 by using ICAO shortcuts.
 Look at http://en.wikipedia.org/wiki/METAR for further information
 
-Copyright (C) 2009-2015 Tobias Blomberg / SM0SVX
+Copyright (C) 2009-2019 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,13 +35,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-#include <cstdio>
-#include <cstdlib>
-#include <stdio.h>
+#include <string.h>
 #include <iostream>
 #include <sstream>
 #include <time.h>
 #include <algorithm>
+#include <queue>
 #include <regex.h>
 
 
@@ -51,8 +50,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-#include <AsyncTcpClient.h>
 #include <AsyncConfig.h>
+#include <AsyncTimer.h>
+#include <AsyncFdWatch.h>
 
 
 
@@ -152,6 +152,165 @@ using namespace SvxLink;
  *
  ****************************************************************************/
 
+class Http : public sigc::trackable
+{
+   CURLM* multi_handle; 
+   Async::Timer update_timer;
+   std::map<int, Async::FdWatch*> watch_map;
+   std::queue<CURL*> url_queue;
+   CURL* pending_curl;
+
+  public:
+
+   Http() : multi_handle(0), pending_curl(0)
+   {
+     multi_handle = curl_multi_init();
+     long curl_timeout = -1;
+     curl_multi_timeout(multi_handle, &curl_timeout);
+     update_timer.setTimeout((curl_timeout >= 0) ? curl_timeout : 100);
+     update_timer.setEnable(false);
+     update_timer.expired.connect(mem_fun(*this, &Http::onTimeout));
+   } /* Http */
+
+   ~Http()
+   {
+     if (pending_curl)
+       curl_easy_cleanup(pending_curl);
+     ClearWatchMap();
+     curl_multi_cleanup(multi_handle);
+   } /* ~Http */
+
+   // a signal when a metar has been available
+   sigc::signal<void, std::string, size_t> metarInfo;
+
+   // a signal when a metar has a timeout
+   sigc::signal<void> metarTimeout;
+
+
+   // update the html handler periodically
+   void onTimeout(Async::Timer *timer)
+   {
+     int handle_count;
+     curl_multi_perform(multi_handle, &handle_count);
+     if (handle_count == 0) 
+     {
+       ClearWatchMap();
+       curl_easy_cleanup(pending_curl);
+       if (url_queue.empty())
+       {
+         pending_curl = 0;
+         update_timer.setEnable(false);
+       }
+       else
+       {
+         pending_curl = url_queue.front();
+         url_queue.pop();
+         curl_multi_add_handle(multi_handle, pending_curl);
+         update_timer.setEnable(true);
+       }
+     }
+     UpdateWatchMap();
+     update_timer.reset();
+   } /* Update */
+
+   void onActivity(Async::FdWatch *watch)
+   {
+     int handle_count;
+     curl_multi_perform(multi_handle, &handle_count);
+     if (handle_count == 0)
+     {
+       ClearWatchMap();
+       curl_easy_cleanup(pending_curl);
+       if (url_queue.empty())
+       {
+         pending_curl = 0;
+         update_timer.setEnable(false);
+       }
+       else
+       {
+         pending_curl = url_queue.front();
+         url_queue.pop();
+         curl_multi_add_handle(multi_handle, pending_curl);
+         UpdateWatchMap();
+         update_timer.setEnable(true);
+       }
+     }
+     update_timer.reset();
+   } /* onActivity */
+
+   static size_t callback(char *contents, size_t size, size_t nmemb,
+                                       void *userp)
+   {
+     if (userp == NULL) return 0;
+     size_t written = size * nmemb;
+     std::string html((const char *)contents, written);
+     static_cast<Http*>(userp)->metarInfo(html, html.size());
+     return written;
+   } /* callback */
+
+   void AddRequest(const char* uri)
+   {
+     CURL* curl = curl_easy_init();
+     curl_easy_setopt(curl, CURLOPT_URL, uri);
+     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &Http::callback);
+     curl_easy_setopt(curl, CURLOPT_WRITEDATA, this);
+
+     if (!pending_curl)
+     {
+       pending_curl = curl;
+       curl_multi_add_handle(multi_handle, pending_curl);
+       UpdateWatchMap();
+       update_timer.reset();
+       update_timer.setEnable(true);
+     }
+     else
+     {
+       url_queue.push(curl);
+     }
+   } /* AddRequest */
+
+  private:
+
+   void UpdateWatchMap()
+   {
+     fd_set fdread;
+     fd_set fdwrite;
+     fd_set fdexcep;
+     int maxfd = -1;
+
+     FD_ZERO(&fdread);
+     FD_ZERO(&fdwrite);
+     FD_ZERO(&fdexcep);
+     curl_multi_fdset(multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd);
+
+     for (int fd = 0; fd <= maxfd; fd++) 
+     {
+       if (watch_map.find(fd) != watch_map.end())
+         continue;
+       if (FD_ISSET(fd, &fdread))
+       {
+         Async::FdWatch *watch = new Async::FdWatch(fd,Async::FdWatch::FD_WATCH_RD);
+         watch->activity.connect(mem_fun(*this, &Http::onActivity));
+         watch_map[fd] = watch;
+       }
+       if (FD_ISSET(fd, &fdwrite)) 
+       {
+         Async::FdWatch *watch = new Async::FdWatch(fd,Async::FdWatch::FD_WATCH_WR);
+         watch->activity.connect(mem_fun(*this, &Http::onActivity));
+         watch_map[fd] = watch;
+       }
+     }
+   } /* UpdateWatchMap */
+
+   void ClearWatchMap() {
+     for (std::map<int, Async::FdWatch*>::iterator it = watch_map.begin();
+          it != watch_map.end(); ++it)
+     {
+       delete it->second;
+     }
+     watch_map.clear();
+   } /* ClearWatchMap */
+};
 
 
 /****************************************************************************
@@ -220,7 +379,7 @@ extern "C" {
 
 ModuleMetarInfo::ModuleMetarInfo(void *dl_handle, Logic *logic,
                                  const string& cfg_name)
-  : Module(dl_handle, logic, cfg_name), remarks(false), debug(false), con(0)
+  : Module(dl_handle, logic, cfg_name), remarks(false), debug(false)
 {
   cout << "\tModule MetarInfo v" MODULE_METARINFO_VERSION " starting...\n";
 
@@ -229,7 +388,7 @@ ModuleMetarInfo::ModuleMetarInfo(void *dl_handle, Logic *logic,
 
 ModuleMetarInfo::~ModuleMetarInfo(void)
 {
-   delete con;
+
 } /* ~ModuleMetarInfo */
 
 
@@ -331,8 +490,6 @@ bool ModuleMetarInfo::initialize(void)
   shdesig["+"] = "heavy";
   shdesig["fm"]= "from";
   shdesig["tl"]= "until";
-
-
 
   if (!Module::initialize())
   {
@@ -458,8 +615,6 @@ void ModuleMetarInfo::activateInit(void)
  */
 void ModuleMetarInfo::deactivateCleanup(void)
 {
-  delete con;
-  con = 0;
 } /* deactivateCleanup */
 
 
@@ -663,28 +818,39 @@ void ModuleMetarInfo::allMsgsWritten(void)
 
 
 /*
-* establish a tcp-connection to the METAR-Server
+* establish a https-connection to the METAR-Server
+* using curl library
 */
-void ModuleMetarInfo::openConnection(void)
+void ModuleMetarInfo::openConnection()
 {
-  if (con == 0)
-  {
-    con = new TcpClient(server, 80);
-    con->connected.connect(mem_fun(*this, &ModuleMetarInfo::onConnected));
-    con->disconnected.connect(mem_fun(*this, &ModuleMetarInfo::onDisconnected));
-    con->dataReceived.connect(mem_fun(*this, &ModuleMetarInfo::onDataReceived));
-    con->connect();
-  }
+
+  Http *http = new Http();
+
+  html = "";
+  std::string path = server;
+              path += link;
+              path += icao;
+
+  http->AddRequest(path.c_str());
+  cout << path << endl;
+  http->metarInfo.connect(mem_fun(*this, &ModuleMetarInfo::onData));
+  http->metarTimeout.connect(mem_fun(*this, &ModuleMetarInfo::onTimeout));
 
 } /* openConnection */
 
 
-int ModuleMetarInfo::onDataReceived(TcpConnection *con, void *buf, int count)
+void ModuleMetarInfo::onTimeout(void)
+{
+  stringstream temp;
+  temp << "metar_not_valid";
+  say(temp);
+} /* ModuleMetarInfo::onTimeout */
+
+
+void ModuleMetarInfo::onData(std::string metarinput, size_t count)
 {
   std::string metar = "";
-  char *metarinput = static_cast<char *>(buf);
-  html += string(metarinput, metarinput + count);
-
+  html += metarinput;
 
   // switching between the newer xml-service by aviationweather and the old 
   // noaa.gov version. With the standard TXT format anybody will be able to 
@@ -703,8 +869,7 @@ int ModuleMetarInfo::onDataReceived(TcpConnection *con, void *buf, int count)
       cout << "Metar information not available" << endl;
       temp << "metar_not_valid";
       say(temp);
-      html = "";
-      return -1;
+      return;
     }
 
     // check day and time, if not in limit throw information away
@@ -716,7 +881,6 @@ int ModuleMetarInfo::onDataReceived(TcpConnection *con, void *buf, int count)
 
     if (metar.length() > 0)
     {
-      html = "";
       if (debug)
       {
         cout << "XML-METAR: " << metar << endl;
@@ -728,14 +892,14 @@ int ModuleMetarInfo::onDataReceived(TcpConnection *con, void *buf, int count)
         cout << "Metar information outdated" << endl;
         temp << "metar_not_valid";
         say(temp);
-        return -1;
+        return;
       }
     }
   }
   // the TXT version of METAR
   else 
   {
-    // This is a MEATAR-report:
+    // This is a METAR-report:
     //
     // 2009/04/07 13:20
     // FBJW 071300Z 09013KT 9999 FEW030 29/15 Q1023 RMK ...
@@ -743,26 +907,46 @@ int ModuleMetarInfo::onDataReceived(TcpConnection *con, void *buf, int count)
     size_t found;
     StrList values;
     std::stringstream temp;
+
     splitStr(values, html, "\n");
-    metar = values.back();  // contains the METAR
-
-    if (debug)
-    {
-      cout << "TXT-METAR: " << metar << endl;
-    }
-
-    values.pop_back();
-    std::string metartime = values.back();  // and the time at UTC
 
     // split \n -> <SPACE>
     while ((found = html.find('\n')) != string::npos) html[found] = ' ';
-
     if (html.find("404 Not Found") != string::npos)
     {
       cout << "ERROR 404 from webserver -> no such airport\n";
       temp << "no_such_airport";
       say(temp);
-      return -1;
+      return;
+    }
+
+    metar = values.back();  // contains the METAR
+    values.pop_back();
+    std::string metartime = values.back();  // and the time at UTC
+
+     // check of valid metar file format
+    regex_t re;
+    std::string reg = "^[0-9]{4}/[0-9]{2}/[0-9]{2}";
+    if (!rmatch(metartime, reg, &re))
+    {
+      cout << "ERROR: wrong Metarfile format, first line should have the date + UTC and "
+           << "must have 16 digits, e.g.:\n"
+           << "2019/04/07 13:20" << endl;
+      return;
+    }
+    regfree(&re);
+
+    if ((metar.find(icao)) == string::npos)
+    {
+      cout << "ERROR: wrong Metarfile format, second line must begin with the correct "
+           << "ICAO airport code (" << icao << ") configured in ModuleMetarInfo.conf,"
+           << "but is \"" << metar << "\"" << endl;
+      return;
+    }
+
+    if (debug)
+    {
+      cout << "TXT-METAR: " << metar << endl;
     }
 
     // check if METAR is actual
@@ -770,13 +954,11 @@ int ModuleMetarInfo::onDataReceived(TcpConnection *con, void *buf, int count)
     {
       temp << "metar_not_valid";
       say(temp);
-      return -1;
+      return;
     }
   }
 
   handleMetar(metar);
-  return count;
-
 } /* onDataReceived */
 
 
@@ -1200,7 +1382,7 @@ int ModuleMetarInfo::checkToken(std::string token)
     mre["^r[0-8][0-9](ll|l|c|r|rr)?/([0-9]|/|c)([1259]|/|l)([0-9]|/|r)([0-9]|/|d)([0-9]|/){2}$"] = ALLRWYSTATE;
     mre["^vv[0-9]{3}$"]                              = VERTICALVIEW;
     mre["^(\\+|\\-|vc|re)?([bdfimprstv][a-z]){1,2}$"]= ACTUALWX;
-    mre["^rwy[0-9]{2}(ll|l|c|r|rr)?$"]               = RUNWAY;
+    mre["^r(wy)?[0-9]{2}(ll|l|c|r|rr)?$"]             = RUNWAY;
     mre["^cig$"]                                       = CEILING;
     mre["^[1-9]$"]                                   = IS1STPARTOFVIEW;
     mre["^rmk$"]                                       = RMK;
@@ -1910,8 +2092,9 @@ bool ModuleMetarInfo::isRunway(std::string &retval, std::string token)
    stringstream ss;
    std::map <string, string>::iterator it;
 
-   ss << token.substr(3,2);
-   token.erase(0,5);
+   token.erase(0,token.find("wy")+2);
+   ss << token.substr(0,2);
+   token.erase(0,3);
 
    if (token.length() > 0)
    {
@@ -2043,53 +2226,6 @@ bool ModuleMetarInfo::ispObscurance(std::string &retval, std::string token)
 } /* ispObscurance */
 
 
-void ModuleMetarInfo::onConnected(void)
-{
-  assert(con->isConnected());
-  string getpath;
-  
-  /*
-   * noaa.gov has changed their web service, new string:
-   * https://aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml&hoursBeforeNow=3&mostRecent=true&stationString=EDDP
-  */
-
-  if (type == "XML")
-  {
-    getpath = "GET ";
-    getpath += link; 
-    getpath += icao;
-    getpath += " HTTP/1.0\r\nHOST:";
-    getpath += server;
-    getpath += "\r\n\r\n";
-  }
-  else
-  {
-    getpath = "GET http://";
-    getpath += server;
-    getpath += "/";
-    getpath += link;
-    getpath += "/";
-    getpath += icao;
-    getpath += ".TXT HTTP/1.0\015\012\015\012";
-  }
-
-  if (debug)
-  {
-    cout << getpath << endl;
-  }
-
-  con->write(getpath.c_str(), getpath.size());
-} /* onConnected */
-
-
-void ModuleMetarInfo::onDisconnected(TcpConnection * /*con*/,
-                     TcpClient::DisconnectReason reason)
-{
-  delete con;
-  con = 0;
-} /* onDisconnect */
-
-
 void ModuleMetarInfo::say(stringstream &tmp)
 {
    if (debug) cout << tmp.str() << endl;  // debug
@@ -2139,7 +2275,7 @@ int ModuleMetarInfo::splitEmptyStr(StrList& L, const string& seq)
 
   return L.size();
 
-} /* ModuleMetarInfo::splitStr */
+} /* ModuleMetarInfo::splitEmptyStr */
 
 
 /*

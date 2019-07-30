@@ -1,14 +1,14 @@
 /**
-@file	 Template.h
-@brief   A_brief_description_for_this_file
-@author  Tobias Blomberg / SM0SVX
-@date	 2017-
+@file   Template.h
+@brief  A_brief_description_for_this_file
+@author Tobias Blomberg / SM0SVX
+@date   2019-
 
 A_detailed_description_for_this_file
 
 \verbatim
 <A brief description of the program or library this file belongs to>
-Copyright (C) 2003-2017 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2019 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@ namespace MyNameSpace
  *
  ****************************************************************************/
 
-  
+
 
 /****************************************************************************
  *
@@ -108,9 +108,9 @@ namespace MyNameSpace
  ****************************************************************************/
 
 /**
-@brief	A_brief_class_description
+@brief  A_brief_class_description
 @author Tobias Blomberg / SM0SVX
-@date   2015-
+@date   2019-
 
 A_detailed_class_description
 
@@ -120,35 +120,33 @@ class Template
 {
   public:
     /**
-     * @brief 	Default constructor
+     * @brief   Default constructor
      */
     Template(void);
-  
+
     /**
-     * @brief 	Destructor
+     * @brief   Destructor
      */
     ~Template(void);
-  
+
     /**
-     * @brief 	A_brief_member_function_description
-     * @param 	param1 Description_of_param1
-     * @return	Return_value_of_this_member_function
+     * @brief   A_brief_member_function_description
+     * @param   param1 Description_of_param1
+     * @return  Return_value_of_this_member_function
      */
-    
+
   protected:
-    
+
   private:
     Template(const Template&);
     Template& operator=(const Template&);
-    
+
 };  /* class Template */
 
 
 } /* namespace */
 
 #endif /* TEMPLATE_INCLUDED */
-
-
 
 /*
  * This file has not been truncated

@@ -136,7 +136,6 @@ AudioEncoderOpus::AudioEncoderOpus(const Options& options)
 #if OPUS_MAJOR > 0
   setLsbDepth(16);
 #endif
-
   setOptions(options);
 } /* AsyncAudioEncoderOpus::AsyncAudioEncoderOpus */
 

@@ -24,7 +24,6 @@ if {![info exists CFG_ID]} {
 #
 set module_name [namespace tail [namespace current]];
 
-
 #
 # An "overloaded" playMsg that eliminates the need to write the module name
 # as the first argument.
@@ -243,8 +242,10 @@ proc remote_connected {call} {
 
 #
 # Executed when an outgoing connection has been established.
+#   call - The callsign of the remote station
 #
-proc connected {} {
+proc connected {call} {
+  #puts "Outgoing Echolink connection to $call established"
   playMsg "connected";
   playSilence 500;
 }
@@ -541,7 +542,11 @@ proc remote_timeout {} {
 # Executed when the squelch state changes
 #
 proc squelch_open {is_open} {
-  if {!$is_open} {
+  # The listen_only_active and CFG_REMOTE_RGR_SOUND global variables are set by
+  # the C++ code
+  variable listen_only_active
+  variable CFG_REMOTE_RGR_SOUND
+  if {$CFG_REMOTE_RGR_SOUND && !$is_open && !$listen_only_active} {
     playSilence 200
     playTone 1000 100 100
   }
