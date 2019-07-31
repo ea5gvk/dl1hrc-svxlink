@@ -38,3 +38,6 @@ SVXSERVER=0.0.5.99.1
 
 # Version for SvxReflector
 SVXREFLECTOR=1.0.1
+
+# Version for RewindLogic
+REWINDLOGIC=0.0.1
