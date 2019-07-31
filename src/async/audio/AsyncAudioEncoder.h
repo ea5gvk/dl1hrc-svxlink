@@ -36,6 +36,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <sigc++/sigc++.h>
 #include <string>
+#include <map>
 
 
 /****************************************************************************
@@ -110,7 +111,7 @@ namespace Async
 
 This is the base class for implementing an audio encoder.
 */
-class AudioEncoder : public AudioSink, public sigc::trackable
+class AudioEncoder : public AudioSink, public virtual sigc::trackable
 {
   public:
     /**
@@ -123,7 +124,9 @@ class AudioEncoder : public AudioSink, public sigc::trackable
      * @brief   Create a new encoder of the specified type
      * @param   name The name of the encoder to create
      */
-    static AudioEncoder *create(const std::string &name);
+    typedef std::map<std::string, std::string> Options;
+
+    static AudioEncoder *create(const std::string &name, const Options &options);
     
     /**
      * @brief 	Default constuctor
