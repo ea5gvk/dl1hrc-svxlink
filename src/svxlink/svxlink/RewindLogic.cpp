@@ -385,7 +385,7 @@ bool RewindLogic::initialize(void)
 #endif*/
 
   try {
-    m_logic_con_in = Async::AudioEncoder::create(m_ambe_handler,m_dec_options);
+    m_logic_con_in = Async::AudioEncoder::create(m_ambe_handler, m_dec_options);
     if (m_logic_con_in == 0)
     {
       cerr << "*** ERROR: Failed to initialize audio encoder" << endl;
@@ -914,23 +914,23 @@ void RewindLogic::sendConfiguration(void)
 
 void RewindLogic::sendSubscription(std::list<int> tglist)
 {
- size_t size1 = sizeof(struct RewindSubscriptionData);
- size_t size2 = sizeof(struct RewindData) + size1;
- struct RewindData* data = (struct RewindData*)alloca(size2);
- struct RewindSubscriptionData* subscription = (struct RewindSubscriptionData*)data->data;
+  size_t size1 = sizeof(struct RewindSubscriptionData);
+  size_t size2 = sizeof(struct RewindData) + size1;
+  struct RewindData* data = (struct RewindData*)alloca(size2);
+  struct RewindSubscriptionData* subscription = (struct RewindSubscriptionData*)data->data;
 
- memcpy(data->sign, REWIND_PROTOCOL_SIGN, REWIND_SIGN_LENGTH);
- data->type   = htole16(REWIND_TYPE_SUBSCRIPTION);
- data->flags  = htole16(REWIND_FLAG_NONE);
- data->length = htole16(size1);
+  memcpy(data->sign, REWIND_PROTOCOL_SIGN, REWIND_SIGN_LENGTH);
+  data->type   = htole16(REWIND_TYPE_SUBSCRIPTION);
+  data->flags  = htole16(REWIND_FLAG_NONE);
+  data->length = htole16(size1);
 
- subscription->type = htole32(SESSION_TYPE_GROUP_VOICE);
+  subscription->type = htole32(SESSION_TYPE_GROUP_VOICE);
 
- for (std::list<int>::iterator it = tglist.begin(); it!=tglist.end(); it++)
- {
-   subscription->number = htole32(*it);
-   sendMsg(data, size2);
- }
+  for (std::list<int>::iterator it = tglist.begin(); it!=tglist.end(); it++)
+  {
+    subscription->number = htole32(*it);
+    sendMsg(data, size2);
+  }
 } /* RewindLogic::sendConfiguration */
 
 
