@@ -196,8 +196,9 @@ class RewindLogic : public LogicBase
     uint16_t              rewind_port;
     std::string           m_callsign;
     std::string           m_id;
-    Async::Timer          m_ping_timer;
-    Async::Timer          m_reconnect_timer;
+    Async::Timer          *m_ping_timer;
+    Async::Timer          *m_reconnect_timer;
+    Async::Timer          *m_flush_timeout_timer;
     Async::AudioEncoder*  m_logic_con_in;
     Async::AudioSource*   m_logic_con_out;
     Async::AudioDecoder*  m_dec;
@@ -225,8 +226,6 @@ class RewindLogic : public LogicBase
     uint32_t              srcId;
     std::list<int>        tglist;
     bool                  inTransmission;
-    Async::Timer          m_flush_timeout_timer;
-
 
     RewindLogic(const RewindLogic&);
     RewindLogic& operator=(const RewindLogic&);

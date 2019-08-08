@@ -131,26 +131,28 @@ RewindLogic::RewindLogic(Async::Config& cfg, const std::string& name)
   : LogicBase(cfg, name),
     m_state(DISCONNECTED), m_udp_sock(0), m_auth_key("passw0rd"),
     rewind_host(""), rewind_port(54005), m_callsign("N0CALL    "),
-    m_ping_timer(5000, Timer::TYPE_PERIODIC, false),
-    m_reconnect_timer(15000, Timer::TYPE_PERIODIC, false),
+    m_ping_timer(0),  m_reconnect_timer(0), m_flush_timeout_timer(0),
+    m_logic_con_in(0), m_logic_con_out(0), m_dec(0),
     sequenceNumber(0), m_slot1(false), m_slot2(false), subscribed(0),
-    inTransmission(false),
-    m_flush_timeout_timer(3000, Timer::TYPE_ONESHOT, false)
+    inTransmission(false)
 {
-  m_reconnect_timer.expired.connect(mem_fun(*this, &RewindLogic::reconnect));
-  m_flush_timeout_timer.expired.connect(
+  m_flush_timeout_timer = new Timer(3000);
+  m_flush_timeout_timer->setEnable(false);
+  m_flush_timeout_timer->expired.connect(
       mem_fun(*this, &RewindLogic::flushTimeout));
 } /* RewindLogic::RewindLogic */
 
 
 RewindLogic::~RewindLogic(void)
 {
-  delete m_udp_sock;
-  delete dns;
-  delete m_logic_con_in;
-  delete m_logic_con_out;
-  //delete m_logic_enc;
-  delete m_dec;
+  delete m_ping_timer; 
+  delete m_reconnect_timer;
+  delete m_flush_timeout_timer;
+  delete m_udp_sock;      m_udp_sock = 0;
+  delete dns;             dns = 0;
+  delete m_logic_con_in;  m_logic_con_in = 0;
+  delete m_logic_con_out; m_logic_con_out = 0;
+  delete m_dec;           m_dec = 0;
 } /* RewindLogic::~RewindLogic */
 
 
@@ -336,7 +338,7 @@ bool RewindLogic::initialize(void)
     m_rxtg = "9";
     cout << "+++ INFO: setting RX_TALKGROUP(s) to default TG 9." << endl;
   }
-  
+
   if (!cfg().getValue(name(), "TX_TALKGROUP", m_txtg))
   {
     m_txtg = "9";
@@ -353,8 +355,9 @@ bool RewindLogic::initialize(void)
   m_swid += "linux:SvxLink v";
   m_swid += SVXLINK_VERSION;
 
-  m_ping_timer.setEnable(false);
-  m_ping_timer.expired.connect(
+  m_ping_timer = new Timer(5000);
+  m_ping_timer->setEnable(false);
+  m_ping_timer->expired.connect(
      mem_fun(*this, &RewindLogic::pingHandler));
 
   // create the Rewind recoder device, DV3k USB stick or DSD lib
@@ -376,14 +379,7 @@ bool RewindLogic::initialize(void)
     }
   }
 
-/*#if INTERNAL_SAMPLE_RATE == 16000
-  {
-    AudioDecimator *d1 = new AudioDecimator(2, coeff_16_8, coeff_16_8_taps);
-    prev_sc->registerSink(d1, true);
-    prev_sc = d1;
-  }
-#endif*/
-
+  // Create the audio Encoder
   try {
     m_logic_con_in = Async::AudioEncoder::create(m_ambe_handler, m_dec_options);
     if (m_logic_con_in == 0)
@@ -403,9 +399,9 @@ bool RewindLogic::initialize(void)
       mem_fun(*this, &RewindLogic::flushEncodedAudio));
   cout << "Loading Encoder " << m_logic_con_in->name() << endl;
 
-    // Create audio decoder
+    // Create the audio decoder
   try {
-    m_dec = Async::AudioDecoder::create(m_ambe_handler,m_dec_options);
+    m_dec = Async::AudioDecoder::create(m_ambe_handler, m_dec_options);
     if (m_dec == 0)
     {
       cerr << "*** ERROR: Failed to initialize audio decoder" << endl;
@@ -415,7 +411,6 @@ bool RewindLogic::initialize(void)
       cerr << e << endl;
       return false;
   }
-
   m_dec->allEncodedSamplesFlushed.connect(
       mem_fun(*this, &RewindLogic::allEncodedSamplesFlushed));
 
@@ -429,19 +424,16 @@ bool RewindLogic::initialize(void)
   {
     AudioFifo *fifo = new Async::AudioFifo(
         2 * jitter_buffer_delay * INTERNAL_SAMPLE_RATE / 1000);
-    //new Async::AudioJitterFifo(100 * INTERNAL_SAMPLE_RATE / 1000);
     fifo->setPrebufSamples(jitter_buffer_delay * INTERNAL_SAMPLE_RATE / 1000);
     prev_src->registerSink(fifo, true);
     prev_src = fifo;
   }
-  m_logic_con_out = prev_src;
 
     // upsampling from 8kHz to 16kHz
-//#if INTERNAL_SAMPLE_RATE == 16000
   AudioInterpolator *up = new AudioInterpolator(2, coeff_16_8, coeff_16_8_taps);
-  m_logic_con_out->registerSink(up, true);
-  m_logic_con_out = up;
-//#endif
+  prev_src->registerSink(up, true);
+  prev_src = up;
+  m_logic_con_out = prev_src;
 
   if (!LogicBase::initialize())
   {
@@ -449,7 +441,10 @@ bool RewindLogic::initialize(void)
     return false;
   }
 
-  m_reconnect_timer.setEnable(true);
+  m_reconnect_timer = new Timer(15000);
+  m_reconnect_timer->expired.connect(mem_fun(*this, &RewindLogic::reconnect));
+  m_reconnect_timer->setEnable(true);
+
    // connect the master server
   connect();
 
@@ -493,7 +488,7 @@ void RewindLogic::connect(void)
   sendKeepAlive();
 
   m_state = CONNECTING;
-  m_ping_timer.setEnable(true);
+  m_ping_timer->setEnable(true);
 
 } /* RewindLogic::onConnected */
 
@@ -540,6 +535,7 @@ void RewindLogic::sendEncodedAudio(const void *buf, int count)
 
     for (int a=0; a<3; a++)
     {
+      cout << data << endl;
       sendMsg(data, size);
     }
     inTransmission = true;
@@ -556,7 +552,7 @@ void RewindLogic::sendEncodedAudio(const void *buf, int count)
   fdata->flags  = htole16(REWIND_FLAG_NONE);         // 0x00
   fdata->length = htole16(REWIND_DMR_AUDIO_FRAME_LENGTH);
   memcpy(fdata->data, bufdata, count);
-  
+
   sendMsg(fdata, fsize);
 } /* RewindLogic::sendEncodedAudio */
 
@@ -574,8 +570,8 @@ void RewindLogic::flushEncodedAudio(void)
 void RewindLogic::onDataReceived(const IpAddress& addr, uint16_t port,
                                          void *buf, int count)
 {
- // cout << "### " << name() << ": RewindLogic::onDataReceived: addr="
-   //    << addr << " port=" << port << " count=" << count << endl;
+  //cout << "### " << name() << ": RewindLogic::onDataReceived: addr="
+  //    << addr << " port=" << port << " count=" << count << endl;
 
   struct RewindData* rd = reinterpret_cast<RewindData*>(buf);
 
@@ -594,7 +590,7 @@ void RewindLogic::onDataReceived(const IpAddress& addr, uint16_t port,
     case REWIND_TYPE_CLOSE:
       cout << "*** Disconnect request received." << endl;
       m_state = DISCONNECTED;
-      m_ping_timer.setEnable(false);
+      m_ping_timer->setEnable(false);
       subscribed = 0;
       return;
 
@@ -615,7 +611,7 @@ void RewindLogic::onDataReceived(const IpAddress& addr, uint16_t port,
       {
         sendSubscription(tglist);
       }
-      m_reconnect_timer.reset();
+      m_reconnect_timer->reset();
       return;
 
     case REWIND_TYPE_FAILURE_CODE:
@@ -687,8 +683,8 @@ void RewindLogic::handleSessionData(uint8_t data[])
   struct RewindSuperHeader* shd
        = reinterpret_cast<RewindSuperHeader*>(data);
   cout << "SourceCall=" << shd->sourceCall << " (" << shd->sourceID
-       << "), DestCall=" << shd->destinationCall << " dstid=" << shd->destinationID
-       << endl;
+       << "), DestCall=" << shd->destinationCall << " (" << shd->destinationID
+       << ")" << endl;
   srcCall = (char*)shd->sourceCall;
   srcId = shd->sourceID;
 
@@ -712,14 +708,13 @@ void RewindLogic::handleAmbeAudiopacket(struct RewindData* ad)
 void RewindLogic::handleDataMessage(struct RewindData* dm)
 {
 
-  /*
   // comment out for now since we have problems with different
   // locale's
   // will possibly be implemented later
 
   uint8_t data[11];
   memcpy(data, dm->data, 10);
-  int off = 0;
+//  int off = 0;
   std::string ts;
   cout << ">" << dec <<
   data[0] << "," <<
@@ -735,6 +730,7 @@ void RewindLogic::handleDataMessage(struct RewindData* dm)
   printf("%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n",
      data[0], data[1],data[2],data[3],data[4], data[5],data[6],data[7],data[8],data[9]);
   cout << "SRCID=" << srcId << endl;
+/*
   sinfo z;
   std::string  call;
   std::string  desc;
@@ -804,7 +800,6 @@ void RewindLogic::authenticate(uint8_t salt[], const string pass)
 
 void RewindLogic::sendMsg(struct RewindData* data, size_t len)
 {
-
   if (ip_addr.isEmpty())
   {
     if (!dns)
@@ -822,7 +817,6 @@ void RewindLogic::sendMsg(struct RewindData* data, size_t len)
   }
 
   data->number = htole32(++sequenceNumber);
-
   m_udp_sock->write(ip_addr, rewind_port, data, len);
 
 } /* RewindLogic::sendUdpMsg */
@@ -831,7 +825,7 @@ void RewindLogic::sendMsg(struct RewindData* data, size_t len)
 void RewindLogic::reconnect(Timer *t)
 {
   cout << "### Reconnecting to Rewind server\n";
-  m_reconnect_timer.reset();
+  m_reconnect_timer->reset();
   m_logic_con_in->allEncodedSamplesFlushed();
   connect();
 } /* RewindLogic::reconnect */
@@ -868,7 +862,7 @@ void RewindLogic::sendKeepAlive(void)
 
   size += sizeof(struct RewindData);
   sendMsg(data, size);
-  m_ping_timer.reset();
+  m_ping_timer->reset();
 
 } /* RewindLogic::sendPing */
 
@@ -891,7 +885,7 @@ void RewindLogic::sendCloseMessage(void)
   sendMsg(data, size);
 
   m_state = DISCONNECTED;
-  m_ping_timer.setEnable(false);
+  m_ping_timer->setEnable(false);
 } /* RewindLogic::sendCloseMessage */
 
 
@@ -959,7 +953,7 @@ void RewindLogic::mkSHA256(uint8_t pass[], int len, uint8_t hash[])
 
 void RewindLogic::flushTimeout(Async::Timer *t)
 {
-  m_flush_timeout_timer.setEnable(false);
+  m_flush_timeout_timer->setEnable(false);
   m_logic_con_in->allEncodedSamplesFlushed();
 } /* ReflectorLogic::flushTimeout */
 
@@ -967,4 +961,3 @@ void RewindLogic::flushTimeout(Async::Timer *t)
 /*
  * This file has not been truncated
  */
-
