@@ -587,11 +587,12 @@ void NetUplink::handleMsg(Msg *msg)
       MsgRxAudioCodecSelect::Opts opts;
       codec_msg->options(opts);
       MsgRxAudioCodecSelect::Opts::const_iterator it;
-      map<string,string> enc_options;
+      map<string, string> enc_options;
       for (it=opts.begin(); it!=opts.end(); ++it)
       {
         enc_options[(*it).first] = (*it).second;
       }
+
       audio_enc = AudioEncoder::create(codec_msg->name(), enc_options);
       if (audio_enc != 0)
       {
@@ -603,6 +604,7 @@ void NetUplink::handleMsg(Msg *msg)
 	rx_splitter->addSink(audio_enc);
         cout << name << ": Using CODEC \"" << audio_enc->name()
              << "\" to encode RX audio\n";
+
 	audio_enc->printCodecParams();
       }
       else
@@ -618,6 +620,7 @@ void NetUplink::handleMsg(Msg *msg)
       MsgTxAudioCodecSelect *codec_msg = 
           reinterpret_cast<MsgTxAudioCodecSelect *>(msg);
       delete audio_dec;
+
       MsgRxAudioCodecSelect::Opts opts;
       codec_msg->options(opts);
       MsgTxAudioCodecSelect::Opts::const_iterator it;

@@ -1,4 +1,31 @@
- 1.7.0 -- ?? ??? 2019
+ 1.8.0 -- ?? ??? ????
+----------------------
+* SvxReflector now support switching traffic on talk groups.
+
+* ReflectorLogic can now request switching talk groups based on the received
+  CTCSS tone frequency. It is also possible to switch to any talk group using
+  DTMF.
+
+* Now possible to use multiple CTCSS squelch tones in parallell.
+
+* SvxReflector now have a QSY functionality used to switch all active nodes on
+  a talk group to another talk group.
+
+* A logic link is now disconnected using <prefix># instead of <prefix>0#. If
+  any digits are specified after the prefix the link will be activated and the
+  digits will be given to the remote logic(s) for processing. Right now only
+  the ReflectorLogic care about these extra digits, also called the
+  subcommand.
+
+* A logic core connected to a logic link can now play announcements on all
+  other connected logics. This is used in the ReflectorLogic to announce talk
+  group selections and command feedback.
+
+* New signal level "detector": CONST
+
+
+
+ 1.7.0 -- 01 Sep 2019
 ----------------------
 * MetarInfo now supports secure http (https) since aviationweather.gov has 
   switched to https only. Read documentation and/or README in directory 
@@ -45,9 +72,6 @@
   RECEIVERS=FastRx1,FastRx2,SlowRx:200. The total squelch open delay will now
   be 100+350=450ms for the fast receivers and 300+350-200=450ms for the slow
   receiver. That is, all receivers are now equally fast.
-
-* Support was added to control the frequency and modulation of receivers and
-  transmitters connected to the SvxLink node.
 
 * New configuration variable CTRL_PTY that can be used in RX and TX
   configuration setions. It will set a PTY than can be used to control the
@@ -135,6 +159,14 @@
   application start to exit. The normal behavior in SvxLink is to open and
   close audio devices as needed. In a local RX and/or TX section set the
   variable AUDIO_DEV_KEEP_OPEN=1.
+
+* Add stop timeout for systemd units after which svxlink will be killed if not
+  exiting within 10 seconds.
+
+* Now possible to specify which mail server to use in the voice mail module.
+
+* ModuleDtmfRepeater: Logic and timings were a bit strange and buggy so the
+  implementation was changed a bit.
 
 
 

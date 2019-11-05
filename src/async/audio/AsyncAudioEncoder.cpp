@@ -187,12 +187,7 @@ AudioEncoder *AudioEncoder::create(const std::string &name,
  *
  ****************************************************************************/
 
-void AudioEncoder::setOptions(const Options &options) {
-  for(Options::const_iterator it = options.begin(); it != options.end(); ++it) 
-  {
-    setOption(it->first,it->second);
-  }
-}
+
 
 /****************************************************************************
  *

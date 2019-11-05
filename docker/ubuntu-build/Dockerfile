@@ -2,19 +2,17 @@
 #   docker build --pull -t svxlink-ubuntu-build .
 #
 # Run with:
-#   docker run -it --rm --hostname ubuntu-build \
-#              --privileged -v /dev/snd:/dev/snd \
-#              svxlink-ubuntu-build
+#   docker run -it --rm --hostname ubuntu-build svxlink-ubuntu-build
 #
 # For using sound inside the docker container add:
-#              --privileged -v /dev/snd:/dev/snd \
-#              -e HOSTAUDIO_GID=$(stat -c "%g" /dev/snd/timer) \
+#              --privileged -v /dev/snd:/dev/snd
+#              -e HOSTAUDIO_GID=$(stat -c "%g" /dev/snd/timer)
 #
 # To import your git config add (mileage may vary):
-#              -v ${HOME}/.gitconfig:/home/svxlink/.gitconfig:ro \
+#              -v ${HOME}/.gitconfig:/home/svxlink/.gitconfig:ro
 #
 # To use a specific git repositoty instead of the default one:
-#              -e GIT_URL=username@your.repo:/path/to/svxlink.git \
+#              -e GIT_URL=username@your.repo:/path/to/svxlink.git
 #
 # To build another branch than master:
 #              -e GIT_BRANCH=the_branch
@@ -23,16 +21,16 @@
 #              -e NUM_CORES=8
 #
 
-#FROM ubuntu
-FROM ubuntu:wily
+FROM ubuntu
 MAINTAINER Tobias Blomberg <sm0svx@ssa.se>
 
 # Install required packages and set up the svxlink user
 RUN apt-get update && \
+    export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install git cmake g++ make libsigc++-2.0-dev libgsm1-dev \
                        libpopt-dev tcl8.5-dev libgcrypt11-dev libspeex-dev \
                        libasound2-dev alsa-utils vorbis-tools libqt4-dev \
-                       libopus-dev librtlsdr-dev curl sudo
+                       libopus-dev librtlsdr-dev libcurl4-openssl-dev curl sudo
 #RUN apt-get -y install groff doxygen
 
 # Install svxlink audio files

@@ -120,7 +120,7 @@ using namespace NetTrxMsg;
 
 NetTx::NetTx(Config &cfg, const string& name)
   : Tx(name), cfg(cfg), tcp_con(0), log_disconnects_once(false),
-    log_disconnect(true), is_transmitting(false), mode(Tx::TX_OFF),
+    log_disconnect(true), mode(Tx::TX_OFF),
     ctcss_enable(false), pacer(0), is_connected(false), pending_flush(false),
     unflushed_samples(false), audio_enc(0), fq(0),
     modulation(Modulation::MOD_UNKNOWN)
@@ -139,6 +139,12 @@ NetTx::~NetTx(void)
 
 bool NetTx::initialize(void)
 {
+  char tx_id = '\0';
+  if (cfg.getValue(name(), "TX_ID", tx_id))
+  {
+    setId(tx_id);
+  }
+
   string host;
   if (!cfg.getValue(name(), "HOST", host))
   {
@@ -167,7 +173,7 @@ bool NetTx::initialize(void)
   pacer = new AudioPacer(INTERNAL_SAMPLE_RATE, 512, 50);
   setHandler(pacer);
   
-  string opt_prefix(audio_enc_name);
+  string opt_prefix(audio_enc->name());
   opt_prefix += "_ENC_";
   list<string> names = cfg.listSection(name());
   list<string>::const_iterator nit;
@@ -235,12 +241,6 @@ void NetTx::setTxCtrlMode(TxCtrlMode mode)
     }
   }
 } /* NetTx::setTxCtrlMode */
-
-
-bool NetTx::isTransmitting(void) const
-{
-  return is_transmitting;
-} /* NetTx::isTransmitting */
 
 
 void NetTx::enableCtcss(bool enable)
@@ -458,18 +458,6 @@ void NetTx::flushEncodedSamples(void)
     allEncodedSamplesFlushed();
   }
 } /* NetTx::flushSamples */
-
-
-void NetTx::setIsTransmitting(bool is_transmitting)
-{
-  if (is_transmitting != this->is_transmitting)
-  {
-    cout << name() << ": The transmitter is "
-      	 << (is_transmitting ? "ON" : "OFF") << endl;
-    this->is_transmitting = is_transmitting;
-    transmitterStateChange(is_transmitting);
-  }
-} /* NetTx::setIsTransmitting */
 
 
 void NetTx::allEncodedSamplesFlushed(void)
