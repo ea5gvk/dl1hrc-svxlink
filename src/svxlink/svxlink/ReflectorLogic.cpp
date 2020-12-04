@@ -126,6 +126,7 @@ ReflectorLogic::ReflectorLogic(Async::Config& cfg, const std::string& name)
     m_next_udp_tx_seq(0), m_next_udp_rx_seq(0),
     m_heartbeat_timer(1000, Timer::TYPE_PERIODIC, false), m_dec(0),
     m_flush_timeout_timer(3000, Timer::TYPE_ONESHOT, false),
+    m_udp_heartbeat_tx_cnt_reset(DEFAULT_UDP_HEARTBEAT_TX_CNT_RESET),
     m_udp_heartbeat_tx_cnt(0), m_udp_heartbeat_rx_cnt(0),
     m_tcp_heartbeat_tx_cnt(0), m_tcp_heartbeat_rx_cnt(0),
     m_con_state(STATE_DISCONNECTED), m_enc(0), m_default_tg(0),
@@ -362,6 +363,9 @@ bool ReflectorLogic::initialize(void)
   m_node_info["sw"] = "SvxLink";
   m_node_info["swVer"] = SVXLINK_VERSION;
 
+  cfg().getValue(name(), "UDP_HEARTBEAT_INTERVAL",
+      m_udp_heartbeat_tx_cnt_reset);
+
   if (!LogicBase::initialize())
   {
     return false;
@@ -429,13 +433,13 @@ void ReflectorLogic::remoteCmdReceived(LogicBase* src_logic,
         }
         else
         {
-          processEvent("tg_qsy_idle");
+          processEvent("tg_qsy_failed");
         }
       }
     }
     else
     {
-      processEvent("tg_qsy_idle");
+      processEvent("tg_qsy_failed");
     }
   }
   else if (cmd == "3")   // Follow last QSY
@@ -648,7 +652,7 @@ void ReflectorLogic::onConnected(void)
   cout << name() << ": Connection established to " << m_con->remoteHost() << ":"
        << m_con->remotePort() << endl;
   sendMsg(MsgProtoVer());
-  m_udp_heartbeat_tx_cnt = UDP_HEARTBEAT_TX_CNT_RESET;
+  m_udp_heartbeat_tx_cnt = m_udp_heartbeat_tx_cnt_reset;
   m_udp_heartbeat_rx_cnt = UDP_HEARTBEAT_RX_CNT_RESET;
   m_tcp_heartbeat_tx_cnt = TCP_HEARTBEAT_TX_CNT_RESET;
   m_tcp_heartbeat_rx_cnt = TCP_HEARTBEAT_RX_CNT_RESET;
@@ -1283,7 +1287,7 @@ void ReflectorLogic::sendUdpMsg(const ReflectorUdpMsg& msg)
     return;
   }
 
-  m_udp_heartbeat_tx_cnt = UDP_HEARTBEAT_TX_CNT_RESET;
+  m_udp_heartbeat_tx_cnt = m_udp_heartbeat_tx_cnt_reset;
 
   if (m_udp_sock == 0)
   {
@@ -1407,28 +1411,13 @@ void ReflectorLogic::handleTimerTick(Async::Timer *t)
 bool ReflectorLogic::setAudioCodec(const std::string& codec_name)
 {
   delete m_enc;
-  string opt_prefix(m_enc->name());
-  opt_prefix += "_ENC_";
-  list<string> names = cfg().listSection(name());
-  map<string, string> enc_options;
-  for (list<string>::const_iterator nit=names.begin(); nit!=names.end(); ++nit)
-  {
-    if ((*nit).find(opt_prefix) == 0)
-    {
-      string opt_value;
-      cfg().getValue(name(), *nit, opt_value);
-      string opt_name((*nit).substr(opt_prefix.size()));
-      enc_options[opt_name] = opt_value;
-    }
-  }
-
-  m_enc = Async::AudioEncoder::create(codec_name, enc_options);
+  m_enc = Async::AudioEncoder::create(codec_name);
   if (m_enc == 0)
   {
     cerr << "*** ERROR[" << name()
          << "]: Failed to initialize " << codec_name
          << " audio encoder" << endl;
-    m_enc = Async::AudioEncoder::create("DUMMY", enc_options);
+    m_enc = Async::AudioEncoder::create("DUMMY");
     assert(m_enc != 0);
     return false;
   }
@@ -1438,6 +1427,19 @@ bool ReflectorLogic::setAudioCodec(const std::string& codec_name)
       mem_fun(*this, &ReflectorLogic::flushEncodedAudio));
   m_enc_endpoint->registerSink(m_enc, false);
 
+  string opt_prefix(m_enc->name());
+  opt_prefix += "_ENC_";
+  list<string> names = cfg().listSection(name());
+  for (list<string>::const_iterator nit=names.begin(); nit!=names.end(); ++nit)
+  {
+    if ((*nit).find(opt_prefix) == 0)
+    {
+      string opt_value;
+      cfg().getValue(name(), *nit, opt_value);
+      string opt_name((*nit).substr(opt_prefix.size()));
+      m_enc->setOption(opt_name, opt_value);
+    }
+  }
   m_enc->printCodecParams();
 
   AudioSink *sink = 0;
@@ -1447,28 +1449,13 @@ bool ReflectorLogic::setAudioCodec(const std::string& codec_name)
     m_dec->unregisterSink();
     delete m_dec;
   }
-
-  opt_prefix = string(m_dec->name()) + "_DEC_";
-  names = cfg().listSection(name());
-  map<string, string> dec_options;
-  for (list<string>::const_iterator nit=names.begin(); nit!=names.end(); ++nit)
-  {
-    if ((*nit).find(opt_prefix) == 0)
-    {
-      string opt_value;
-      cfg().getValue(name(), *nit, opt_value);
-      string opt_name((*nit).substr(opt_prefix.size()));
-      dec_options[opt_name] = opt_value;
-    }
-  }
-
-  m_dec = Async::AudioDecoder::create(codec_name, enc_options);
+  m_dec = Async::AudioDecoder::create(codec_name);
   if (m_dec == 0)
   {
     cerr << "*** ERROR[" << name()
          << "]: Failed to initialize " << codec_name
          << " audio decoder" << endl;
-    m_dec = Async::AudioDecoder::create("DUMMY", enc_options);
+    m_dec = Async::AudioDecoder::create("DUMMY");
     assert(m_dec != 0);
     return false;
   }
@@ -1479,6 +1466,18 @@ bool ReflectorLogic::setAudioCodec(const std::string& codec_name)
     m_dec->registerSink(sink, true);
   }
 
+  opt_prefix = string(m_dec->name()) + "_DEC_";
+  names = cfg().listSection(name());
+  for (list<string>::const_iterator nit=names.begin(); nit!=names.end(); ++nit)
+  {
+    if ((*nit).find(opt_prefix) == 0)
+    {
+      string opt_value;
+      cfg().getValue(name(), *nit, opt_value);
+      string opt_name((*nit).substr(opt_prefix.size()));
+      m_dec->setOption(opt_name, opt_value);
+    }
+  }
   m_dec->printCodecParams();
 
   return true;

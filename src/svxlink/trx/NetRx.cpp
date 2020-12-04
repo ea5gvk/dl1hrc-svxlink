@@ -189,24 +189,8 @@ bool NetRx::initialize(void)
   
   string auth_key;
   cfg.getValue(name(), "AUTH_KEY", auth_key);
-
-  string opt_prefix(audio_dec_name);
-  opt_prefix += "_DEC_";
-  list<string> names = cfg.listSection(name());
-  list<string>::const_iterator nit;
-  map<string,string> dec_options;
-  for (nit=names.begin(); nit!=names.end(); ++nit)
-  {
-    if ((*nit).find(opt_prefix) == 0)
-    {
-      string opt_value;
-      cfg.getValue(name(), *nit, opt_value);
-      string opt_name((*nit).substr(opt_prefix.size()));
-      dec_options[opt_name] = opt_value;
-    }
-  }
-
-  audio_dec = AudioDecoder::create(audio_dec_name, dec_options);
+  
+  audio_dec = AudioDecoder::create(audio_dec_name);
   if (audio_dec == 0)
   {
     cerr << name() << ": *** ERROR: Illegal audio codec (" << audio_dec_name
@@ -215,7 +199,21 @@ bool NetRx::initialize(void)
   }
   audio_dec->allEncodedSamplesFlushed.connect(
           mem_fun(*this, &NetRx::allEncodedSamplesFlushed));
-
+  string opt_prefix(audio_dec->name());
+  opt_prefix += "_DEC_";
+  list<string> names = cfg.listSection(name());
+  list<string>::const_iterator nit;
+  for (nit=names.begin(); nit!=names.end(); ++nit)
+  {
+    if ((*nit).find(opt_prefix) == 0)
+    {
+      string opt_value;
+      cfg.getValue(name(), *nit, opt_value);
+      string opt_name((*nit).substr(opt_prefix.size()));
+      audio_dec->setOption(opt_name, opt_value);
+    }
+  }
+  audio_dec->printCodecParams();
   setHandler(audio_dec);
   
   tcp_con = NetTrxTcpClient::instance(host, atoi(tcp_port.c_str()));

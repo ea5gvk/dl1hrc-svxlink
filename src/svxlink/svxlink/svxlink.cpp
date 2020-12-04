@@ -6,7 +6,7 @@
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2003-2019 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2020 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -85,7 +85,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "SimplexLogic.h"
 #include "RepeaterLogic.h"
 #include "ReflectorLogic.h"
-#include "RewindLogic.h"
 #include "LinkManager.h"
 
 
@@ -436,7 +435,7 @@ int main(int argc, char **argv)
   cfg.getValue("GLOBAL", "TIMESTAMP_FORMAT", tstamp_format);
   
   cout << PROGRAM_NAME " v" SVXLINK_VERSION
-          " Copyright (C) 2003-2019 Tobias Blomberg / SM0SVX\n\n";
+          " Copyright (C) 2003-2020 Tobias Blomberg / SM0SVX\n\n";
   cout << PROGRAM_NAME " comes with ABSOLUTELY NO WARRANTY. "
           "This is free software, and you are\n";
   cout << "welcome to redistribute it in accordance with the terms "
@@ -755,10 +754,6 @@ static void initialize_logics(Config &cfg)
     else if (logic_type == "Reflector")
     {
       logic = new ReflectorLogic(cfg, logic_name);
-    }
-    else if (logic_type == "Rewind")
-    {
-      logic = new RewindLogic(cfg, logic_name);
     }
     else if (logic_type == "Dummy")
     {

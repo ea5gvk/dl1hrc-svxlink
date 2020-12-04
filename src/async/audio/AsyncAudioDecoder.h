@@ -36,7 +36,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include <string>
 #include <sigc++/sigc++.h>
-#include <map>
 
 
 /****************************************************************************
@@ -111,7 +110,7 @@ namespace Async
 
 This is the base class for an audio decoder.
 */
-class AudioDecoder : public AudioSource, public virtual sigc::trackable
+class AudioDecoder : public AudioSource, public sigc::trackable
 {
   public:
     /**
@@ -124,10 +123,7 @@ class AudioDecoder : public AudioSource, public virtual sigc::trackable
      * @brief   Create a new decoder of the specified type
      * @param   name The name of the decoder to create
      */
-
-    typedef std::map<std::string,std::string> Options;
-
-    static AudioDecoder *create(const std::string &name, const Options &options);
+    static AudioDecoder *create(const std::string &name);
     
     /**
      * @brief 	Default constuctor
@@ -144,14 +140,14 @@ class AudioDecoder : public AudioSource, public virtual sigc::trackable
      * @returns Return the name of the codec
      */
     virtual const char *name(void) const = 0;
-
+  
     /**
-     * @brief 	Set an option for the decoder during initialization
+     * @brief 	Set an option for the decoder
      * @param 	name The name of the option
      * @param 	value The value of the option
      */
     virtual void setOption(const std::string &name, const std::string &value) {}
-  
+
     /**
      * @brief Print codec parameter settings
      */

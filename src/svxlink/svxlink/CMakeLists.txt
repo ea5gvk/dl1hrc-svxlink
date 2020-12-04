@@ -64,7 +64,7 @@ set(LIBS trx locationinfo asynccpp asyncaudio asynccore svxmisc ${LIBS})
 add_executable(svxlink
   MsgHandler.cpp Module.cpp Logic.cpp SimplexLogic.cpp RepeaterLogic.cpp
   EventHandler.cpp LinkManager.cpp CmdParser.cpp QsoRecorder.cpp svxlink.cpp
-  DtmfDigitHandler.cpp ReflectorLogic.cpp RewindLogic.cpp sha256.cpp
+  DtmfDigitHandler.cpp ReflectorLogic.cpp
   ${VERSION_DEPENDS}
 )
 target_link_libraries(svxlink ${LIBS})
@@ -83,9 +83,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gpio.conf.in
   @ONLY
   )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/svxlink_gpio_up.in
-	${RUNTIME_OUTPUT_DIRECTORY}/svxlink_gpio_up)
+	${RUNTIME_OUTPUT_DIRECTORY}/svxlink_gpio_up
+        @ONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/svxlink_gpio_down.in
-	${RUNTIME_OUTPUT_DIRECTORY}/svxlink_gpio_down)
+	${RUNTIME_OUTPUT_DIRECTORY}/svxlink_gpio_down
+        @ONLY)
 
 # Install targets
 install(TARGETS svxlink DESTINATION ${BIN_INSTALL_DIR})
