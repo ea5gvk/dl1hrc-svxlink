@@ -112,7 +112,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
-AudioDecoderSpeex::AudioDecoderSpeex(void)
+AudioDecoderSpeex::AudioDecoderSpeex(const Options& options)
 {
   speex_bits_init(&bits);
 #if INTERNAL_SAMPLE_RATE == 16000

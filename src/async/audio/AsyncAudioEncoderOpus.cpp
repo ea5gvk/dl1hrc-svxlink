@@ -114,7 +114,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
-AudioEncoderOpus::AudioEncoderOpus(void)
+AudioEncoderOpus::AudioEncoderOpus(const Options& options)
   : enc(0), frame_size(0), sample_buf(0), buf_len(0)
 {
   int error;

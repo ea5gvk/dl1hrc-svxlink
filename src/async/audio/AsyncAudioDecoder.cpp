@@ -60,6 +60,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #ifdef OPUS_MAJOR
 #include "AsyncAudioDecoderOpus.h"
 #endif
+#include "AsyncAudioDecoderAmbe.h"
 
 
 /****************************************************************************
@@ -123,7 +124,7 @@ using namespace Async;
 bool AudioDecoder::isAvailable(const std::string &name)
 {
   return (name == "NULL") || (name == "RAW") || (name == "S16") ||
-         (name == "GSM") ||
+         (name == "GSM") || (name == "AMBE") ||
 #ifdef SPEEX_MAJOR
          (name == "SPEEX") ||
 #endif
@@ -134,7 +135,8 @@ bool AudioDecoder::isAvailable(const std::string &name)
 } /* AudioDecoder::isAvailable */
 
 
-AudioDecoder *AudioDecoder::create(const std::string &name)
+AudioDecoder *AudioDecoder::create(const std::string &name, 
+                   const std::map<std::string,std::string> &options)
 {
   if (name == "NULL")
   {
@@ -159,15 +161,19 @@ AudioDecoder *AudioDecoder::create(const std::string &name)
 #ifdef SPEEX_MAJOR
   else if (name == "SPEEX")
   {
-    return new AudioDecoderSpeex;
+    return new AudioDecoderSpeex(options);
   }
 #endif
 #ifdef OPUS_MAJOR
   else if (name == "OPUS")
   {
-    return new AudioDecoderOpus;
+    return new AudioDecoderOpus(options);
   }
 #endif
+  else if (name == "AMBE")
+  {
+    return AudioDecoderAmbe::create(options);
+  }
   else
   {
     return 0;

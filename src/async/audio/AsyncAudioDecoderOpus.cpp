@@ -114,7 +114,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
-AudioDecoderOpus::AudioDecoderOpus(void)
+AudioDecoderOpus::AudioDecoderOpus(const Options &options)
   : frame_size(0)
 {
   int error;
