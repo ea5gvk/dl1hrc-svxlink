@@ -205,7 +205,7 @@ bool NetRx::initialize(void)
       dec_options[opt_name] = opt_value;
     }
   }
-
+  
   audio_dec = AudioDecoder::create(audio_dec_name, dec_options);
   if (audio_dec == 0)
   {
@@ -215,7 +215,7 @@ bool NetRx::initialize(void)
   }
   audio_dec->allEncodedSamplesFlushed.connect(
           mem_fun(*this, &NetRx::allEncodedSamplesFlushed));
-  audio_dec->printCodecParams();
+
   setHandler(audio_dec);
   
   tcp_con = NetTrxTcpClient::instance(host, atoi(tcp_port.c_str()));

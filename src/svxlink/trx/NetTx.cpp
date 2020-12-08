@@ -173,7 +173,7 @@ bool NetTx::initialize(void)
   pacer = new AudioPacer(INTERNAL_SAMPLE_RATE, 512, 50);
   setHandler(pacer);
   
-  string opt_prefix(audio_enc_name);
+  string opt_prefix(audio_enc->name());
   opt_prefix += "_ENC_";
   list<string> names = cfg.listSection(name());
   list<string>::const_iterator nit;
@@ -188,7 +188,7 @@ bool NetTx::initialize(void)
       enc_options[opt_name] = opt_value;
     }
   }
-
+  
   audio_enc = AudioEncoder::create(audio_enc_name, enc_options);
   if (audio_enc == 0)
   {

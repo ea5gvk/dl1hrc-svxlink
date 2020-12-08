@@ -83,7 +83,7 @@ namespace Async
 
 Factory for different implementations of the AMBE codec.
 */
-class AudioCodecAmbe : public AudioEncoder, public AudioDecoder
+class AudioCodecAmbe : public virtual AudioEncoder, public virtual AudioDecoder
 {
   public:
     typedef AudioEncoder::Options Options;

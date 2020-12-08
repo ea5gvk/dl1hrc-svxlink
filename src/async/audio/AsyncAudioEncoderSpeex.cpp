@@ -113,7 +113,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
-AudioEncoderSpeex::AudioEncoderSpeex(const Options &options)
+AudioEncoderSpeex::AudioEncoderSpeex(const Options& options)
   : buf_len(0), frames_per_packet(4), frame_cnt(0)
 {
   speex_bits_init(&bits);

@@ -124,8 +124,12 @@ class AudioEncoder : public AudioSink, public virtual sigc::trackable
      * @brief   Create a new encoder of the specified type
      * @param   name The name of the encoder to create
      */
-    typedef std::map<std::string, std::string> Options;
-
+    typedef std::map<std::string,std::string> Options;
+    
+    /**
+     * @brief   Create a new encoder of the specified type
+     * @param   name The name of the encoder to create
+     */
     static AudioEncoder *create(const std::string &name, const Options &options);
     
     /**

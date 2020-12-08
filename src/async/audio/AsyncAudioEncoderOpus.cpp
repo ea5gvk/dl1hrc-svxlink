@@ -114,7 +114,7 @@ using namespace Async;
  *
  ****************************************************************************/
 
-AudioEncoderOpus::AudioEncoderOpus(const Options &options)
+AudioEncoderOpus::AudioEncoderOpus(const Options& options)
   : enc(0), frame_size(0), sample_buf(0), buf_len(0)
 {
   int error;
@@ -220,7 +220,7 @@ float AudioEncoderOpus::setFrameSize(float new_frame_size_ms)
     // The frame size may be 2.5, 5, 10, 20, 40 or 60 ms
   frame_size =
     static_cast<int>(new_frame_size_ms * INTERNAL_SAMPLE_RATE / 1000);
-  delete sample_buf;
+  delete [] sample_buf;
   sample_buf = new float[frame_size];
   return new_frame_size_ms;
 } /* AudioEncoderOpus::setFrameSize */

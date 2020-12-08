@@ -125,7 +125,11 @@ class AudioDecoder : public AudioSource, public virtual sigc::trackable
      * @param   name The name of the decoder to create
      */
     typedef std::map<std::string,std::string> Options;
-
+    
+    /**
+     * @brief   Create a new decoder of the specified type
+     * @param   name The name of the decoder to create
+     */
     static AudioDecoder *create(const std::string &name, const Options &options);
     
     /**
