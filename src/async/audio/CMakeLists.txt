@@ -97,6 +97,7 @@ set(LIBSRC AsyncAudioSource.cpp AsyncAudioSink.cpp
            AsyncAudioFsf.cpp AsyncAudioContainer.cpp AsyncAudioContainerWav.cpp
            AsyncAudioContainerPcm.cpp 
            AsyncAudioCodecAmbe.cpp
+           AsyncAudioContainerPcm.cpp
            )
 
 if(Speex_FOUND)
