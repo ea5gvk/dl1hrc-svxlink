@@ -415,6 +415,12 @@ class ToneDetector : public sigc::trackable, public Async::AudioSink
     bool isActivated(void) const { return is_activated; }
 
     /**
+     * @brief   Get the latest calculated SNR
+     * @return  Returns the SNR value that was calculated latest
+     */
+    float lastSnr(void) const { return last_snr; }
+
+    /**
      * @brief  Reset the tone detector
      */
     void reset(void);
@@ -425,6 +431,15 @@ class ToneDetector : public sigc::trackable, public Async::AudioSink
      * @param len The number of samples in the buffer
      */
     virtual int writeSamples(const float *buf, int len);
+
+    /**
+     * @brief   Tell the sink to flush the previously written samples
+     *
+     * This function is used to tell the sink to flush previously written
+     * samples. When done flushing, the sink should call the
+     * sourceAllSamplesFlushed function.
+     */
+    virtual void flushSamples(void) { sourceAllSamplesFlushed(); }
 
     /**
      * @brief  A signal that is emitted when the tone detector changes state
@@ -475,6 +490,7 @@ class ToneDetector : public sigc::trackable, public Async::AudioSink
     DetectorParams	*undet_par;
     DetectorParams	*par;
     double		passband_energy;
+    float               last_snr;
 
     std::vector<float>::const_iterator win;
 

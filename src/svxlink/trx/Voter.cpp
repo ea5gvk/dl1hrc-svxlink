@@ -6,7 +6,7 @@
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2003-2012 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2021 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <list>
 #include <sigc++/bind.h>
 #include <sys/time.h>
+#include <json/json.h>
 
 
 /****************************************************************************
@@ -109,7 +110,9 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
 {
   public:
     SatRx(Config &cfg, const string &rx_name, int id, int fifo_length_ms)
-      : rx_id(id), rx(0), fifo(0), sql_open(false)
+      : rx_id(id), rx(0), fifo(0), sql_open(false), enabled(true),
+        mute_state(Rx::MUTE_ALL), // FIXME: Set this from the Rx object
+        sql_open_delay(0)
     {
       rx = RxFactory::createNamedRx(cfg, rx_name);
       if (rx != 0)
@@ -122,10 +125,9 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
 		mem_fun(*this, &SatRx::rxSquelchOpen));
 	rx->signalLevelUpdated.connect(
 		mem_fun(*this, &SatRx::rxSignalLevelUpdated));
-	
-	// FIXME: Should we buffer the tone detector output like we do with
-	// DTMF and selcall?
-	rx->toneDetected.connect(toneDetected.make_slot());
+        rx->toneDetected.connect(toneDetected.make_slot());
+
+        // FIXME: We should take care of publishStateEvent
 
 	AudioSource *prev_src = rx;
 
@@ -165,7 +167,25 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
       rx->setVerbose(false);
       return true;
     }
-    
+
+    void setEnabled(bool do_enable, Rx::MuteState disabled_mute_state)
+    {
+      if (do_enable)
+      {
+        enabled = true;
+        setMuteState(mute_state);
+      }
+      else
+      {
+        Rx::MuteState orig_mute_state = mute_state;
+        setMuteState(disabled_mute_state);
+        mute_state = orig_mute_state;
+        enabled = false;
+      }
+    }
+
+    bool isEnabled(void) const { return enabled; }
+
     const std::string& name(void) const { return rx->name(); }
     
     bool addToneDetector(float fq, int bw, float thresh, int required_duration)
@@ -175,8 +195,18 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
     
     float signalStrength(void) const { return rx->signalStrength(); }
 
+    const std::string& squelchActivityInfo(void) const
+    {
+      return rx->squelchActivityInfo();
+    }
+
     void setMuteState(Rx::MuteState new_mute_state)
     {
+      mute_state = new_mute_state;
+      if (!enabled)
+      {
+        return;
+      }
       rx->setMuteState(new_mute_state);
       if (new_mute_state != Rx::MUTE_NONE)
       {
@@ -189,7 +219,11 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
       }
     }
     
-    void reset(void) { rx->reset(); }
+    void reset(void)
+    {
+      rx->reset();
+      mute_state = Rx::MUTE_ALL; // FIXME: Set from Rx object
+    }
     
     bool squelchIsOpen(void) const { return sql_open; }
     
@@ -214,7 +248,13 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
       }
     }
     
-    int id(void) const { return rx_id; }
+    char id(void) const { return rx->sqlRxId(); }
+
+    void setSqlOpenDelay(unsigned new_sql_open_delay)
+    {
+      sql_open_delay = new_sql_open_delay;
+    }
+    unsigned sqlOpenDelay(void) const { return sql_open_delay; }
     
     signal<void, char, int>  	dtmfDigitDetected;
     signal<void, string>  	selcallSequenceDetected;
@@ -235,13 +275,16 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
     typedef list<pair<char, int> >	DtmfBuf;
     typedef list<string>		SelcallBuf;
     
-    int		rx_id;    
-    Rx		*rx;
-    AudioFifo 	*fifo;
-    AudioValve	valve;
-    DtmfBuf   	dtmf_buf;
-    SelcallBuf	selcall_buf;
-    bool      	sql_open;
+    int		  rx_id;
+    Rx		  *rx;
+    AudioFifo 	  *fifo;
+    AudioValve	  valve;
+    DtmfBuf   	  dtmf_buf;
+    SelcallBuf	  selcall_buf;
+    bool      	  sql_open;
+    bool          enabled;
+    Rx::MuteState mute_state;
+    unsigned      sql_open_delay;
     
     void onDtmfDigitDetected(char digit, int duration)
     {
@@ -335,15 +378,18 @@ class Voter::SatRx : public AudioSource, public sigc::trackable
 
 Voter::Voter(Config &cfg, const std::string& name)
   : Rx(cfg, name), cfg(cfg), m_verbose(true), selector(0),
-    sm(Macho::State<Top>(this)), is_processing_event(false)
+    sm(Macho::State<Top>(this)), is_processing_event(false), command_pty(0),
+    m_print_sat_squelch(false)
 {
-  Rx::setVerbose(false);
 } /* Voter::Voter */
 
 
 Voter::~Voter(void)
 {
+  delete command_pty;
+  command_pty = 0;
   delete selector;
+  selector = 0;
   
     // Mute all receivers before deleting them so that we do not get any
     // unexpected updates during deletion
@@ -366,7 +412,22 @@ bool Voter::initialize(void)
   {
     return false;
   }
-  
+
+  string pty_path;
+  if(cfg.getValue(name(), "COMMAND_PTY", pty_path))
+  {
+    command_pty = new Pty(pty_path);
+    if (!command_pty->open())
+    {
+      cerr << "*** ERROR: Could not open voter command PTY "
+      << pty_path << " as specified in configuration variable "
+      << name() << "/" << "COMMAND_PTY" << endl;
+      return false;
+    }
+    command_pty->dataReceived.connect(
+        sigc::mem_fun(*this, &Voter::onCommandPtyInput));
+  }
+
   string receivers;
   if (!cfg.getValue(name(), "RECEIVERS", receivers))
   {
@@ -446,7 +507,9 @@ bool Voter::initialize(void)
     return false;
   }
   sm->setRxSwitchDelay(rx_switch_delay);
-  
+
+  cfg.getValue(name(), "VERBOSE", m_print_sat_squelch);
+
   selector = new AudioSelector;
   setHandler(selector);
   
@@ -454,11 +517,25 @@ bool Voter::initialize(void)
   for (;;)
   {
     string::iterator comma = find(start, receivers.end(), ',');
-    string rx_name(start, comma);
+    string::iterator name_end(comma);
+    string::iterator colon = find(start, comma, ':');
+    unsigned sql_open_delay = 0;
+    if (colon != comma)
+    {
+      name_end = colon;
+      if (++colon != comma)
+      {
+        string sql_open_delay_str(colon, comma);
+        istringstream is(sql_open_delay_str);
+        is >> sql_open_delay;
+      }
+    }
+    string rx_name(start, name_end);
     if (!rx_name.empty())
     {
       cout << "\tAdding receiver: " << rx_name << endl;
       SatRx *srx = new SatRx(cfg, rx_name, rxs.size() + 1, buffer_length);
+      srx->setSqlOpenDelay(sql_open_delay);
       srx->squelchOpen.connect(mem_fun(*this, &Voter::satSquelchOpen));
       srx->signalLevelUpdated.connect(
 	      mem_fun(*this, &Voter::satSignalLevelUpdated));
@@ -520,7 +597,7 @@ float Voter::signalStrength(void) const
 } /* Voter::signalStrength */
 
 
-int Voter::sqlRxId(void) const
+char Voter::sqlRxId(void) const
 {
   return const_cast<Macho::Machine<Top>&>(sm)->sqlRxId();
 } /* Voter::sqlRxId */
@@ -572,15 +649,30 @@ void Voter::dispatchEvent(Macho::IEvent<Top> *event)
 
 void Voter::satSquelchOpen(bool is_open, SatRx *srx)
 {
-  //cout << "Voter::satSquelchOpen: is_open=" << (is_open ? "TRUE" : "FALSE")
-  //     << " srx=" << srx->name() << endl;
+  if (m_print_sat_squelch)
+  {
+    std::cout << name() << "[" << srx->name() << "]"
+         << ": The squelch is " << (is_open ? "OPEN" : "CLOSED")
+         << " (siglev="
+         << static_cast<int>(std::roundf(srx->signalStrength()))
+         << ")";
+    if (!srx->isEnabled())
+    {
+      std::cout << " [MUTED]" << std::endl;
+      return;
+    }
+    std::cout << std::endl;
+  }
   dispatchEvent(Macho::Event(&Top::satSquelchOpen, srx, is_open));
 } /* Voter::satSquelchOpen */
 
 
 void Voter::satSignalLevelUpdated(float siglev, SatRx *srx)
 {
-  dispatchEvent(Macho::Event(&Top::satSignalLevelUpdated, srx, siglev));
+  if (srx->isEnabled())
+  {
+    dispatchEvent(Macho::Event(&Top::satSignalLevelUpdated, srx, siglev));
+  }
 } /* Voter::satSignalLevelUpdated */
 
 
@@ -616,27 +708,35 @@ void Voter::resetAll(void)
 
 void Voter::printSquelchState(void)
 {
-  stringstream os;
-  os << setfill('0') << std::internal;
-
+  Json::Value event(Json::arrayValue);
   list<SatRx *>::iterator it;
   for (it=rxs.begin(); it!=rxs.end(); ++it)
   {
-    float siglev = (*it)->signalStrength();
-    bool sql_is_open = (*it)->squelchIsOpen();
-
-    os << (*it)->name();
-    if (sql_is_open)
+    SatRx *srx = *it;
+    float siglev = srx->signalStrength();
+    bool sql_is_open = srx->squelchIsOpen();
+    bool is_enabled = srx->isEnabled();
+    bool is_active = sql_is_open && ((*it) == sm->activeSrx());
+    Json::Value rx(Json::objectValue);
+    rx["name"] = srx->name();
+    char rx_id = srx->id();
+    rx["id"] = std::string(&rx_id, &rx_id+1);
+    rx["enabled"] = is_enabled;
+    if (is_enabled)
     {
-      os << ((*it) == sm->activeSrx() ? "*" : ":");
+      rx["sql_open"] = sql_is_open;
+      rx["active"] = is_active;
+      rx["siglev"] = static_cast<int>(siglev);
     }
-    else
-    {
-      os << "_";
-    }
-    os << showpos << setw(4) << static_cast<int>(siglev) << noshowpos;
-    os << " ";
+    event.append(rx);
   }
+  Json::StreamWriterBuilder builder;
+  builder["commentStyle"] = "None";
+  builder["indentation"] = ""; //The JSON document is written on a single line
+  Json::StreamWriter* writer = builder.newStreamWriter();
+  stringstream os;
+  writer->write(event, &os);
+  delete writer;
   publishStateEvent("Voter:sql_state", os.str());
 } /* Voter::printSquelchState */
 
@@ -648,7 +748,7 @@ Voter::SatRx *Voter::findBestRx(void) const
   list<SatRx *>::const_iterator it;
   for (it=rxs.begin(); it!=rxs.end(); ++it)
   {
-    if ((*it)->squelchIsOpen() &&
+    if ((*it)->isEnabled() && (*it)->squelchIsOpen() &&
 	((best_rx == 0) || ((*it)->signalStrength() > best_rx_siglev)))
     {
       best_rx = *it;
@@ -873,7 +973,7 @@ void Voter::Idle::satSquelchOpen(SatRx *srx, bool is_open)
     }
     else
     {
-      setState<VotingDelay>();
+      setState<VotingDelay>(srx);
     }
   }
 } /* Voter::Idle::satSquelchOpen */
@@ -889,8 +989,15 @@ void Voter::Idle::satSquelchOpen(SatRx *srx, bool is_open)
 void Voter::VotingDelay::entry(void)
 {
   //cout << "### VotingDelay::entry\n";
-  startTimer(votingDelay());
+  //startTimer(votingDelay());
 } /* Voter::VotingDelay::entry */
+
+
+void Voter::VotingDelay::init(SatRx *srx)
+{
+  //cout << "### VotingDelay::init\n";
+  startTimer(max(votingDelay() - srx->sqlOpenDelay(), 0U));
+} /* Voter::VotingDelay::init */
 
 
 void Voter::VotingDelay::exit(void)
@@ -969,7 +1076,7 @@ void Voter::ActiveRxSelected::setMuteState(Rx::MuteState new_mute_state)
 } /* Voter::ActiveRxSelected::setMuteState */
 
 
-int Voter::ActiveRxSelected::sqlRxId(void)
+char Voter::ActiveRxSelected::sqlRxId(void)
 {
   return box().active_srx->id();
 } /* Voter::ActiveRxSelected::sqlRxId */
@@ -996,15 +1103,15 @@ void Voter::ActiveRxSelected::changeActiveSrx(SatRx *srx)
 
 void Voter::SquelchOpen::entry(void)
 {
+  std::ostringstream ss;
   if (voter().m_verbose)
   {
-    SatRx *srx = activeSrx();
-    cout << voter().name() << ": The squelch is OPEN"
-	 << " (" << srx->name() << "=" << srx->signalStrength() << ")"
-	 << endl;
+    const SatRx *srx = activeSrx();
+    ss << srx->name() << "[" << srx->squelchActivityInfo() << "]="
+       << static_cast<int>(std::roundf(srx->signalStrength()));
   }
-  
-  runTask(bind(mem_fun(voter(), &Voter::setSquelchState), true));
+
+  runTask(bind(mem_fun(voter(), &Voter::setSquelchState), true, ss.str()));
   runTask(bind(mem_fun(activeSrx(), &SatRx::stopOutput), false));
   runTask(mem_fun(voter(), &Voter::printSquelchState));
 } /* Voter::SquelchOpen::entry */
@@ -1018,15 +1125,15 @@ void Voter::SquelchOpen::init(void)
 
 void Voter::SquelchOpen::exit(void)
 {
+  std::ostringstream ss;
   if (voter().m_verbose)
   {
-    SatRx *srx = activeSrx();
-    cout << voter().name() << ": The squelch is CLOSED"
-	 << " (" << srx->name() << "=" << srx->signalStrength() << ")"
-	 << endl;
+    const SatRx *srx = activeSrx();
+    ss << srx->name() << "[" << srx->squelchActivityInfo() << "]="
+       << static_cast<int>(std::roundf(srx->signalStrength()));
   }
-  
-  runTask(bind(mem_fun(voter(), &Voter::setSquelchState), false));
+
+  runTask(bind(mem_fun(voter(), &Voter::setSquelchState), false, ss.str()));
   runTask(mem_fun(voter(), &Voter::printSquelchState));
 } /* Voter::SquelchOpen::exit */
 
@@ -1224,6 +1331,105 @@ void Voter::SwitchActiveRx::timerExpired(void)
   setState<Receiving>();
 } /* Voter::SwitchActiveRx::timerExpired */
 
+
+void Voter::onCommandPtyInput(const void *buf, size_t count)
+{
+  const char *buffer = reinterpret_cast<const char*>(buf);
+  for (size_t i=0; i<count; ++i)
+  {
+    char ch = buffer[i];
+    switch (ch)
+    {
+      case '\n':  // Execute command on NL
+        handlePtyCommand(command_buf);
+        command_buf.clear();
+        break;
+
+      case '\r':  // Ignore CR
+        break;
+
+      default:    // Append character to command buffer
+        if (command_buf.size() >= 256)  // Prevent cmd buffer growing too big
+        {
+          command_buf.clear();
+        }
+        command_buf += ch;
+        break;
+    }
+  }
+} /* Voter::onCommandPtyInput */
+
+
+void Voter::handlePtyCommand(const std::string &full_command)
+{
+  istringstream is(full_command);
+  string command;
+  if (!(is >> command))
+  {
+    return;
+  }
+
+  if (command == "ENABLE") // Enable receiver
+  {
+    string rx_name;
+    if (!(is >> rx_name))
+    {
+      cerr << "*** WARNING: Malformed voter PTY command: \""
+           << full_command << "\"" << endl;
+      return;
+    }
+    setRxEnabled(rx_name, true);
+  }
+  else if (command == "MUTE") // Mute receiver audio
+  {
+    std::string rx_name;
+    if (!(is >> rx_name))
+    {
+      cerr << "*** WARNING: Malformed voter PTY command: \""
+           << full_command << "\"" << endl;
+      return;
+    }
+    setRxEnabled(rx_name, false, Rx::MUTE_CONTENT);
+  }
+  else if (command == "DISABLE") // Disable receiver
+  {
+    string rx_name;
+    if (!(is >> rx_name))
+    {
+      cerr << "*** WARNING: Malformed voter PTY command: \""
+           << full_command << "\"" << endl;
+      return;
+    }
+    setRxEnabled(rx_name, false);
+  }
+  else
+  {
+    cerr << "*** WARNING: Unknown voter PTY command received: \""
+         << full_command << "\"" << endl;
+  }
+} /* Voter::handlePtyCommand */
+
+
+void Voter::setRxEnabled(const std::string &rx_name, bool do_enable,
+                         Rx::MuteState disabled_mute_state)
+{
+  list<SatRx *>::iterator it;
+  for (it=rxs.begin(); it!=rxs.end(); ++it)
+  {
+    if ((*it)->name() == rx_name)
+    {
+      if (do_enable != (*it)->isEnabled())
+      {
+        cout << name() << ": " << (do_enable ? "Enabling" : "Disabling")
+             << " receiver " << (*it)->name() << endl;
+        (*it)->setEnabled(do_enable, disabled_mute_state);
+      }
+      return;
+    }
+  }
+  cerr << "*** WARNING: Could not " << (do_enable ? "enable" : "disable")
+       << " non-existent receiver \"" << rx_name << "\"" << endl;
+} /* Voter::setRxEnabled */
 
 
 /*

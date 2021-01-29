@@ -1,4 +1,4 @@
-.TH QTEL "1" "December  17, 2010"
+.TH QTEL "1" "SEPTEMBER 2019" Linux "User Manuals"
 .
 .SH NAME
 .
@@ -19,7 +19,7 @@ The main window consists of four areas. The top-left is where to choose which cl
 staions to view (Conferences, Links, Repeaters and private Stations). All stations in
 a class is shown to the top-right. At left-bottom is a message area that shows the messages
 from the EchoLink directory server. At right-bottom is a list of incoming connections. To
-accept an incoming connection, highligt the station and press "Accept".
+accept an incoming connection, highlight the station and press "Accept".
 .
 .PP
 .B The Qtel Communications Dialog
@@ -52,6 +52,18 @@ For detailed description look at
 or at
 .B
 /usr/share/doc/svxlink/qteluserdoc.pdf
+.
+.SH ENVIRONMENT
+.
+.TP
+ASYNC_AUDIO_NOTRIGGER
+Set this environment variable to 1 if you get an error about
+.B ioctl: Broken pipe
+during qtel startup when using OSS audio.
+.TP
+ASYNC_AUDIO_ALSA_ZEROFILL
+Set this environment variable to 0 to stop the Alsa audio code from writing
+zeros to the audio device when there is no audio to write available.
 .
 .SH AUTHOR
 .

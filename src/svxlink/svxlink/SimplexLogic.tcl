@@ -25,7 +25,7 @@ if {$logic_name != [namespace tail [namespace current]]} {
 proc startup {} {
   global logic_name;
   append func $logic_name "::checkPeriodicIdentify";
-  Logic::addTimerTickSubscriber $func;
+  Logic::addMinuteTickSubscriber $func;
   Logic::startup;
 }
 
@@ -169,6 +169,14 @@ proc every_minute {} {
 
 
 #
+# Executed once every second
+#
+proc every_second {} {
+  Logic::every_second;
+}
+
+
+#
 # Executed each time the transmitter is turned on or off
 #
 proc transmit {is_on} {
@@ -288,6 +296,15 @@ proc list_languages {} {
 #
 proc logic_online {online} {
   Logic::logic_online $online
+}
+
+
+#
+# Executed when a configuration variable is updated at runtime in the logic
+# core
+#
+proc config_updated {tag value} {
+  Logic::config_updated "$tag" "$value"
 }
 
 

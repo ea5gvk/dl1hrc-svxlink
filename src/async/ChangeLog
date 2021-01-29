@@ -1,7 +1,97 @@
- 1.4.1 -- ?? ??? 2015
+ 1.6.1 -- ?? ??? 2020
+----------------------
+
+* ASYNC_AUDIO_ALSA_ZEROFILL is now enabled by default.
+
+* Config::getValue() for vectors now tokenize on comma in addition to
+  whitespace.
+
+* Improved implementation for SvxLink::SepPair to work better with streaming.
+
+* Config: Add support for calling getValue on keyed containers, like std::set
+  and std::multiset.
+
+* Msg: Add support for std::set variable in messages.
+
+* New member function AudioSelector::selectedSource() used to find out which
+  source that are currently selected.
+
+* AudioSelector::autoSelectEnabled() can now be called with a constant source.
+
+* Add a signal to the Config class so that one can subscribe to changes in the
+  configuration.
+
+* Chunked mode added to the Async::HttpServerConnection.
+
+* Fix small memory deallocation bug in Async::AudioEncoderOpus.
+
+* New template class Async::Factory for creating object factories.
+
+* Added an AudioContainer framework.
+
+* The Config::valueUpdated signal is now only emitted if the value is changed.
+
+* The Pty::setLineBuffered method can now be used to enable line buffered mode
+  where incoming chars are buffered until a <CR> or <LF> is received.
+
+* Templated function Async::Config::setValue() so that generic types can be
+  used without converting them to string first.
+
+
+
+ 1.6.0 -- 01 Sep 2019
+----------------------
+
+* New class Async::AudioFsf, an implementation of a frequency sampling filter.
+
+* Add method Async::Config::listSections() making it possible to list all
+  configuration sections.
+
+* Small optimization in the Async::CppApplication main loop.
+
+* AudioDeviceAlsa can now write zeros to the audio device on underflow. That
+  is, when the audio device is open but there is no audio to write zeros will
+  be written instead. Enable this behavior by setting the environment variable
+  ASYNC_AUDIO_ALSA_ZEROFILL=1.
+
+
+
+ 1.5.0 -- 30 Dec 2017
 ----------------------
 
 * Support for Qt5 added. Patch contributed by Richard Neese.
+
+* Bugfix in AsyncCppDnsLookupWorker: Lookup could hang due to mutex
+  locking issues. Patch by Steve/DH1DM.
+
+* Bugfix in AsyncTcpClient: An assertion error could occur if the connect
+  method was called twice.
+
+* Bugfix in AsyncTcpServer: Fix memory leak
+
+* UdpSocket: The dataReceived signal now also provide the remote UDP port
+  number
+
+* Bugfix in AsyncAudioDeviceAlsa/AsyncAudioIO: Assertion for some sound
+  boards in Async::Timer::setEnable due to the
+  AudioDeviceAlsa::samplesToWrite function returning a negative value.
+
+* Now possible to ask the AudioEncoder and AudioDecoder if a codec is
+  supported or not.
+
+* AudioSelector bugfix: The output was not flushed when disconnecting
+  the active source. This hung the audio stream. In the process of fixing
+  that bug the AudioSelector was to a large part rewritten. The new
+  implementation also made it possible to implement seamless switches (no
+  flush when switching between two active streams).
+
+* AudioProcessor bugfix: State could get corrupted due to double call of
+  sample output function.
+
+* TcpClient: DNS lookup is now done on every reconnect.
+
+* AudioDeviceAlsa: Relaxed assertion for snd_pcm_readi so that fewer frames
+  than requested may be returned.
 
 
 

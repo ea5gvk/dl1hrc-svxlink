@@ -10,7 +10,7 @@ server core (e.g. via a TCP/IP network).
 
 \verbatim
 RemoteTrx - A remote receiver for the SvxLink server
-Copyright (C) 2003-2015 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2020 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -271,11 +271,6 @@ int main(int argc, char **argv)
     stdout_watch->activity.connect(sigc::ptr_fun(&stdout_handler));
 
       /* Redirect stdout to the logpipe */
-    if (close(STDOUT_FILENO) == -1)
-    {
-      perror("close(stdout)");
-      exit(1);
-    }
     if (dup2(pipefd[1], STDOUT_FILENO) == -1)
     {
       perror("dup2(stdout)");
@@ -283,19 +278,28 @@ int main(int argc, char **argv)
     }
 
       /* Redirect stderr to the logpipe */
-    if (close(STDERR_FILENO) == -1)
-    {
-      perror("close(stderr)");
-      exit(1);
-    }
     if (dup2(pipefd[1], STDERR_FILENO) == -1)
     {
       perror("dup2(stderr)");
       exit(1);
     }
 
-      /* Close stdin */
-    close(STDIN_FILENO);
+      // We also need to close stdin but that is not a good idea since we need
+      // the stdin filedescriptor to keep being allocated so that it is not
+      // assigned to some other random filedescriptor allocation. That would
+      // be very bad.
+    int devnull = open("/dev/null", O_RDONLY);
+    if (devnull == -1)
+    {
+      perror("open(/dev/null)");
+      exit(1);
+    }
+    if (dup2(devnull, STDIN_FILENO) == -1)
+    {
+      perror("dup2(stdin)");
+      exit(1);
+    }
+    close(devnull);
     
       /* Force stdout to line buffered mode */
     if (setvbuf(stdout, NULL, _IOLBF, 0) != 0)
@@ -470,7 +474,7 @@ int main(int argc, char **argv)
   cfg.getValue("GLOBAL", "TIMESTAMP_FORMAT", tstamp_format);
   
   cout << PROGRAM_NAME " v" REMOTE_TRX_VERSION
-          " Copyright (C) 2003-2015 Tobias Blomberg / SM0SVX\n\n";
+          " Copyright (C) 2003-2020 Tobias Blomberg / SM0SVX\n\n";
   cout << PROGRAM_NAME " comes with ABSOLUTELY NO WARRANTY. "
           "This is free software, and you are\n";
   cout << "welcome to redistribute it in accordance with the "

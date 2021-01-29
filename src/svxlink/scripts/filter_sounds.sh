@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ###############################################################################
 #
 # This is the filter_sounds.sh script which is used to process sound clips for
@@ -76,6 +76,12 @@ fi
 SRC_DIR=$1
 DEST_DIR=$2
 SILENCE_LEVEL=45
+
+# Check for requird external utilities
+if ! which sox &>/dev/null; then
+  echo "*** ERROR: The sox utility is not installed"
+  exit 1
+fi
 
 # Check if the filter_sounds.cfg config file exists and source it in if it does
 if [ ! -r "${SRC_DIR}/filter_sounds.cfg" ]; then

@@ -39,6 +39,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cstdlib>
 #include <vector>
 
+#include <string.h>
 
 /****************************************************************************
  *
@@ -58,13 +59,16 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <common.h>
 
 
+#include <AsyncPty.h>
+#include <AsyncPtyStreamBuf.h>
+
 /****************************************************************************
  *
  * Local Includes
  *
  ****************************************************************************/
 
-#include "version/MODULE_ECHOLINK.h"
+#include "version/MODULE_ECHO_LINK.h"
 #include "ModuleEchoLink.h"
 #include "QsoImpl.h"
 
@@ -158,9 +162,9 @@ ModuleEchoLink::ModuleEchoLink(void *dl_handle, Logic *logic,
     listen_only_valve(0), selector(0), num_con_max(0), num_con_ttl(5*60),
     num_con_block_time(120*60), num_con_update_timer(0), reject_conf(false),
     autocon_echolink_id(0), autocon_time(DEFAULT_AUTOCON_TIME),
-    autocon_timer(0), proxy(0)
+    autocon_timer(0), proxy(0), pty(0)
 {
-  cout << "\tModule EchoLink v" MODULE_ECHOLINK_VERSION " starting...\n";
+  cout << "\tModule EchoLink v" MODULE_ECHO_LINK_VERSION " starting...\n";
   
 } /* ModuleEchoLink */
 
@@ -429,8 +433,13 @@ bool ModuleEchoLink::initialize(void)
     moduleCleanup();
     return false;
   }
-  Dispatcher::instance()->incomingConnection.connect(
-      mem_fun(*this, &ModuleEchoLink::onIncomingConnection));
+  bool drop_all_incoming = false;
+  if (!cfg().getValue(cfgName(), "DROP_ALL_INCOMING", drop_all_incoming) ||
+      !drop_all_incoming)
+  {
+    Dispatcher::instance()->incomingConnection.connect(
+        mem_fun(*this, &ModuleEchoLink::onIncomingConnection));
+  }
 
     // Create audio pipe chain for audio transmitted to the remote EchoLink
     // stations: <from core> -> Valve -> Splitter (-> QsoImpl ...)
@@ -459,6 +468,21 @@ bool ModuleEchoLink::initialize(void)
     autocon_timer = new Timer(15000, Timer::TYPE_PERIODIC);
     autocon_timer->expired.connect(
         mem_fun(*this, &ModuleEchoLink::checkAutoCon));
+  }
+
+  string pty_path;
+  if(cfg().getValue(cfgName(), "COMMAND_PTY", pty_path))
+  {
+    pty = new Pty(pty_path);
+    if (!pty->open())
+    {
+      cerr << "*** ERROR: Could not open echolink PTY "
+           << pty_path << " as specified in configuration variable "
+           << name() << "/" << "COMMAND_PTY" << endl;
+      return false;
+    }
+    pty->dataReceived.connect(
+        sigc::mem_fun(*this, &ModuleEchoLink::onCommandPtyInput));
   }
 
   return true;
@@ -500,6 +524,85 @@ void ModuleEchoLink::logicIdleStateChanged(bool is_idle)
  * Private member functions
  *
  ****************************************************************************/
+
+void ModuleEchoLink::handlePtyCommand(const std::string &full_command)
+{
+  istringstream is(full_command);
+  string command;
+  if (!(is >> command))
+  {
+    return;
+  }
+
+  if (command == "KILL") // Disconnect active talker
+  {
+    if (talker == 0)
+    {
+      cout << "EchoLink: Trying to KILL, but no active talker" << endl;
+    }
+    else
+    {
+      cout << "EchoLink: Killing talker: " << talker->remoteCallsign() << endl;
+      talker->disconnect();
+    }
+  }
+  else if (command == "DISC") // Disconnect client by callsign
+  {
+    string callsign;
+    if (!(is >> callsign))
+    {
+      cerr << "*** WARNING: Malformed EchoLink PTY disconnect command: \""
+           << full_command << "\"" << endl;
+      return;
+    }
+    vector<QsoImpl *>::iterator it;
+    for (it = qsos.begin(); it != qsos.end(); ++it)
+    {
+      if ((*it)->remoteCallsign() == callsign)
+      {
+        cout << "EchoLink: Disconnecting user "
+             << (*it)->remoteCallsign() << endl;
+        (*it)->disconnect();
+        return;
+      }
+    }
+    cerr << "*** WARNING: Could not find EchoLink user \"" << callsign
+         << "\" in PTY command \"DISC\"" << endl;
+  }
+  else
+  {
+    cerr << "*** WARNING: Unknown EchoLink PTY command received: \""
+         << full_command << "\"" << endl;
+  }
+} /* ModuleEchoLink::handlePtyCommand */
+
+
+void ModuleEchoLink::onCommandPtyInput(const void *buf, size_t count)
+{
+  const char *buffer = reinterpret_cast<const char*>(buf);
+  for (size_t i=0; i<count; ++i)
+  {
+    char ch = buffer[i];
+    switch (ch)
+    {
+      case '\n':  // Execute command on NL
+        handlePtyCommand(command_buf);
+        command_buf.clear();
+        break;
+
+      case '\r':  // Ignore CR
+        break;
+
+      default:    // Append character to command buffer
+        if (command_buf.size() >= 256)  // Prevent cmd buffer growing too big
+        {
+          command_buf.clear();
+        }
+        command_buf += ch;
+        break;
+    }
+  }
+} /* ModuleEchoLink::onCommandPtyInput */
 
 
 void ModuleEchoLink::moduleCleanup(void)
@@ -898,6 +1001,34 @@ void ModuleEchoLink::onError(const string& msg)
 } /* onError */
 
 
+/*
+ *----------------------------------------------------------------------------
+ * Method:    clientListChanged
+ * Purpose:   Called on connect or disconnect of a remote client to send an
+ *    	      event to list the connected stations.
+ * Input:     None
+ * Output:    None
+ * Author:    Wim Fournier / PH7WIM
+ * Created:   2016-01-11
+ * Remarks:
+ * Bugs:
+ *----------------------------------------------------------------------------
+ */
+void ModuleEchoLink::clientListChanged(void)
+{
+  stringstream ss;
+  ss << "client_list_changed [list";
+  for (vector<QsoImpl *>::iterator it = qsos.begin(); it != qsos.end(); ++it)
+  {
+    if ((*it)->currentState() != Qso::STATE_DISCONNECTED)
+    {
+      ss << " " << (*it)->remoteCallsign();
+    }
+  }
+  ss << "]";
+  processEvent(ss.str());
+} /* clientListChanged */
+
 
 /*
  *----------------------------------------------------------------------------
@@ -981,6 +1112,8 @@ void ModuleEchoLink::onIncomingConnection(const IpAddress& ip,
   qso->stateChange.connect(mem_fun(*this, &ModuleEchoLink::onStateChange));
   qso->chatMsgReceived.connect(
           mem_fun(*this, &ModuleEchoLink::onChatMsgReceived));
+  qso->infoMsgReceived.connect(
+          mem_fun(*this, &ModuleEchoLink::onInfoMsgReceived));
   qso->isReceiving.connect(mem_fun(*this, &ModuleEchoLink::onIsReceiving));
   qso->audioReceivedRaw.connect(
       	  mem_fun(*this, &ModuleEchoLink::audioFromRemoteRaw));
@@ -1088,9 +1221,15 @@ void ModuleEchoLink::onStateChange(QsoImpl *qso, Qso::State qso_state)
 
       broadcastTalkerStatus();
       updateDescription();
+      clientListChanged();
       break;
     }
     
+    case Qso::STATE_CONNECTED:
+      updateEventVariables();
+      clientListChanged();
+      break;
+
     default:
       updateEventVariables();
       break;
@@ -1143,6 +1282,37 @@ void ModuleEchoLink::onChatMsgReceived(QsoImpl *qso, const string& msg)
 
 /*
  *----------------------------------------------------------------------------
+ * Method:    onInfoMsgReceived
+ * Purpose:   Called by the EchoLink::Qso object when a info message has been
+ *    	      received from the remote station.
+ * Input:     qso - The QSO object
+ *    	      msg - The received message
+ * Output:    None
+ * Author:    Tobias Blomberg / SM0SVX
+ * Created:   2017-05-13
+ * Remarks:
+ * Bugs:
+ *----------------------------------------------------------------------------
+ */
+void ModuleEchoLink::onInfoMsgReceived(QsoImpl *qso, const string& msg)
+{
+    // Escape TCL control characters
+  string escaped(msg);
+  replaceAll(escaped, "\\", "\\\\");
+  replaceAll(escaped, "{", "\\{");
+  replaceAll(escaped, "}", "\\}");
+  stringstream ss;
+    // FIXME: This TCL specific code should not be here
+  ss << "info_received \"" << qso->remoteCallsign()
+     << "\" [subst -nocommands -novariables {";
+  ss << escaped;
+  ss << "}]";
+  processEvent(ss.str());
+} /* onInfoMsgReceived */
+
+
+/*
+ *----------------------------------------------------------------------------
  * Method:    onIsReceiving
  * Purpose:   Called by the EchoLink::Qso object to indicate whether the
  *    	      remote station is transmitting or not.
@@ -1162,7 +1332,8 @@ void ModuleEchoLink::onIsReceiving(bool is_receiving, QsoImpl *qso)
   //     << (is_receiving ? "TRUE" : "FALSE") << endl;
   
   stringstream ss;
-  ss << "is_receiving " << (is_receiving ? "1" : "0");
+  ss << "is_receiving " << (is_receiving ? "1" : "0")
+     << " " << qso->remoteCallsign();
   processEvent(ss.str());
 
   if ((talker == 0) && is_receiving)
@@ -1346,6 +1517,8 @@ void ModuleEchoLink::createOutgoingConnection(const StationData &station)
     qso->stateChange.connect(mem_fun(*this, &ModuleEchoLink::onStateChange));
     qso->chatMsgReceived.connect(
         mem_fun(*this, &ModuleEchoLink::onChatMsgReceived));
+    qso->infoMsgReceived.connect(
+        mem_fun(*this, &ModuleEchoLink::onInfoMsgReceived));
     qso->isReceiving.connect(mem_fun(*this, &ModuleEchoLink::onIsReceiving));
     qso->audioReceivedRaw.connect(
       	    mem_fun(*this, &ModuleEchoLink::audioFromRemoteRaw));

@@ -83,3 +83,30 @@
    ...
    fun:TclNREvalObjEx
 }
+{
+   TclpAlloc
+   Memcheck:Leak
+   match-leak-kinds: reachable,possible
+   fun:malloc
+   ...
+   fun:TclpAlloc
+   ...
+}
+{
+   Tcl_NewObj
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   ...
+   fun:Tcl_NewObj
+   ...
+}
+{
+   Tcl_NewStringObj
+   Memcheck:Leak
+   match-leak-kinds: reachable,possible
+   fun:malloc
+   ...
+   fun:Tcl_NewStringObj
+   ...
+}

@@ -1,7 +1,16 @@
- 1.2.3 -- ?? ??? 2015
+ 1.2.4 -- 06 Jan 2017
+----------------------
+
+* Bugfix: Qtel translations were not installed.
+
+
+
+ 1.2.3 -- 30 Dec 2017
 ----------------------
 
 * Support for Qt5 added. Patch contributed by Richard Neese.
+
+* Updated Turkish translation. Patch contributed by TA3CP.
 
 
 

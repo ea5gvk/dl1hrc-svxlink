@@ -16,7 +16,7 @@ set(FORMS MainWindowBase.ui ComDialogBase.ui SettingsDialogBase.ui)
 set(RESOURCES qtel.qrc)
 
 # Libraries
-set(LIBS ${LIBS} echolib asyncqt asyncaudio asynccore)
+set(LIBS ${LIBS} echolib asyncqt asyncaudio asynccore svxmisc)
 
 # Find the GSM codec library and include directory
 find_package(GSM REQUIRED)
@@ -55,11 +55,6 @@ endif()
 # We also need to add the current build directory to the include search path
 # to find automatically generated h-files.
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-# Add targets for version files
-set(VERSION_DEPENDS)
-string(TOUPPER ${PROG} PROG_VERNAME)
-add_version_target(${PROG_VERNAME} VERSION_DEPENDS)
 
 # Compile the application
 add_executable(${PROG} ${PRGSRC} ${QTHEADERS_MOC} ${FORMS_HEADERS}

@@ -37,6 +37,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cmath>
 #include <cstring>
 #include <ctime>
+#include <sys/time.h>
 
 
 /****************************************************************************
@@ -259,7 +260,7 @@ int AprsUdpClient::buildSdesPacket(char *p)
 {
   time_t update;
   struct tm *utc;
-  char pos[20], info[80], tmp[80];
+  char pos[128], info[80], tmp[256];
   char *ap;
   int ver, len;
 

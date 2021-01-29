@@ -6,7 +6,7 @@
 
 \verbatim
 SvxLink - A Multi Purpose Voice Services System for Ham Radio Use
-Copyright (C) 2003-2015 Tobias Blomberg / SM0SVX
+Copyright (C) 2003-2019 Tobias Blomberg / SM0SVX
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <sigc++/sigc++.h>
 
 #include <string>
+#include <sstream>
 
 
 /****************************************************************************
@@ -62,7 +63,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  ****************************************************************************/
 
-class Logic;
 
 
 /****************************************************************************
@@ -116,8 +116,8 @@ class EventHandler : public sigc::trackable
     /**
      * @brief 	Constuctor
      */
-    EventHandler(const std::string& event_script, Logic *logic);
-  
+    EventHandler(const std::string& event_script, const std::string& logic_name);
+
     /**
      * @brief 	Destructor
      */
@@ -135,7 +135,15 @@ class EventHandler : public sigc::trackable
      * @param 	value The value to set the given variable to
      */
     void setVariable(const std::string& name, const std::string& value);
-  
+
+    template <typename T>
+    void setVariable(const std::string& name, const T& value)
+    {
+      std::ostringstream os;
+      os << value;
+      setVariable(name, os.str());
+    } /* EventHandler::setVariable */
+
     /**
      * @brief 	Process the given event
      * @param 	event The event must be a valid TCL function call
@@ -173,6 +181,15 @@ class EventHandler : public sigc::trackable
     sigc::signal<void, int, int, int>      playTone;
     
     /**
+     * @brief 	A signal that is emitted when the TCL script want to play
+     *	      	back a dtmf digit
+     * @param 	digit     The dtmf-tone as character (0-9, A-D, *, #)
+     * @param 	amp   	  The tone amplitude to use (0-1000)
+     * @param 	duration  The duration of the tone in milliseconds
+     */
+    sigc::signal<void, const std::string&, int, int> playDtmf;
+
+    /**
      * @brief 	A signal that is emitted when the TCL script want to start
      *	      	a recording
      * @param 	filename The name of the file to record the audio to
@@ -201,14 +218,31 @@ class EventHandler : public sigc::trackable
     sigc::signal<void, const std::string&,
                  const std::string&> publishStateEvent;
     
-    
+    /**
+     * @brief 	A signal that is emitted when the TCL script want to inject
+     *	      	DTMF digits in the command queue
+     * @param 	digits    The dtmf-digits as character (0-9, A-D, *, #)
+     * @param 	duration  The duration of each digit in milliseconds
+     */
+    sigc::signal<void, const std::string&, int> injectDtmf;
+
+    /**
+     * @brief 	A signal that is emitted when the TCL script want to set
+     *	      	a configuration variable
+     * @param 	section The name of the configuration section
+     * @param 	tag     The name of the configureation variable
+     * @param 	value   The new value for the configuration variable
+     */
+    sigc::signal<void, const std::string&, const std::string&,
+                 const std::string&> setConfigValue;
+
   protected:
-    
+
   private:
-    std::string event_script;
-    Logic	*logic;
-    Tcl_Interp  *interp;
-    
+    std::string   event_script;
+    std::string   logic_name;
+    Tcl_Interp *  interp;
+
     static int playFileHandler(ClientData cdata, Tcl_Interp *irp,
       	      	    int argc, const char *argv[]);
     static int playSilenceHandler(ClientData cdata, Tcl_Interp *irp,
@@ -221,7 +255,13 @@ class EventHandler : public sigc::trackable
       	      	    int argc, const char *argv[]);
     static int publishStateEventHandler(ClientData cdata, Tcl_Interp *irp,
       	            int argc, const char *argv[]);
-    
+    static int playDtmfHandler(ClientData cdata, Tcl_Interp *irp,
+                    int argc, const char *argv[]);
+    static int injectDtmfHandler(ClientData cdata, Tcl_Interp *irp,
+                    int argc, const char *argv[]);
+    static int setConfigValueHandler(ClientData cdata, Tcl_Interp *irp,
+                    int argc, const char *argv[]);
+
 };  /* class EventHandler */
 
 

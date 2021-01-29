@@ -52,7 +52,8 @@ extern "C" {
 
 #include <AsyncAudioSink.h>
 #include <AsyncAudioSource.h>
-#include <AsyncTcpConnection.h>
+#include <AsyncTcpClient.h>
+#include <CppStdCompat.h>
 
 
 /****************************************************************************
@@ -74,7 +75,6 @@ namespace Async
   class AudioPacer;
   class AudioFifo;
   class AudioPassthrough;
-  class TcpClient;
   class TcpConnection;
 };
 
@@ -194,7 +194,7 @@ class QsoFrn
     /**
      * @brief Method to put QSO to live
      */
-    void connect(void);
+    void connect(bool is_backup=false);
 
     /**
      * @brief Disconnect QSO from server, put it to disconnected state
@@ -521,25 +521,26 @@ class QsoFrn
     void onDelayedReconnect(Async::Timer *timer);
 
   private:
-    static const int    CLIENT_INDEX_SIZE       = 2;
-    static const int    TCP_BUFFER_SIZE         = 65536;
-    static const int    FRAME_COUNT             = 5;
-    static const int    PCM_FRAME_SIZE          = 160*2;  // WAV49 has 2x
-    static const int    GSM_FRAME_SIZE          = 65;     // WAV49 has 65
-    static const int    BUFFER_SIZE             = FRAME_COUNT*PCM_FRAME_SIZE;
-    static const int    FRN_AUDIO_PACKET_SIZE   = FRAME_COUNT*GSM_FRAME_SIZE;
+    static const int        CLIENT_INDEX_SIZE       = 2;
+    static const int        TCP_BUFFER_SIZE         = 65536;
+    static const int        FRAME_COUNT             = 5;
+    static const int        PCM_FRAME_SIZE          = 160*2;  // WAV49 has 2x
+    static const int        GSM_FRAME_SIZE          = 65;     // WAV49 has 65
+    static const int        BUFFER_SIZE             = FRAME_COUNT*PCM_FRAME_SIZE;
+    static const int        FRN_AUDIO_PACKET_SIZE   = FRAME_COUNT*GSM_FRAME_SIZE;
 
-    static const int    CON_TIMEOUT_TIME        = 30000;
-    static const int    RX_TIMEOUT_TIME         = 1000;
-    static const int    KEEPALIVE_TIMEOUT_TIME  = 5000;
+    static const int        CON_TIMEOUT_TIME        = 30000;
+    static const int        RX_TIMEOUT_TIME         = 1000;
+    static const int        KEEPALIVE_TIMEOUT_TIME  = 5000;
 
-    static const int    MAX_CONNECT_RETRY_CNT   = 5;
-    static const int    RECONNECT_TIMEOUT_TIME  = 2000;
-    static const int    RECONNECT_BACKOFF       = 5;
+    static const int        MAX_CONNECT_RETRY_CNT   = 10;
+    static const int        RECONNECT_TIMEOUT_TIME  = 5*1000;
+    static const int        RECONNECT_MAX_TIMEOUT   = 2*60*1000;
+    static CONSTEXPR float  RECONNECT_BACKOFF       = 1.2f;
 
     bool                init_ok;
 
-    Async::TcpClient *  tcp_client;
+    Async::TcpClient<>* tcp_client;
     Async::Timer *      rx_timeout_timer;
     Async::Timer *      con_timeout_timer;
     Async::Timer *      keepalive_timer;
@@ -556,10 +557,14 @@ class QsoFrn
     bool                is_receiving_voice;
     bool                is_rf_disabled;
     int                 reconnect_timeout_ms;
+    std::string         server;
+    std::string         port;
 
     bool                opt_frn_debug;
     std::string         opt_server;
     std::string         opt_port;
+    std::string         opt_server_backup;
+    std::string         opt_port_backup;
     std::string         opt_version;
     std::string         opt_email_address;
     std::string         opt_dyn_password;
