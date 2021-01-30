@@ -532,6 +532,7 @@ bool LocalRxBase::initialize(void)
   string filterdesc;
   if (cfg().getValue(name(), "AUDIO_FILTER", filterdesc))
   {
+    cout << "+++ Init Audiofilter=" << filterdesc << endl;
     AudioFilter *additional_audiofilter = new AudioFilter(filterdesc);
     prev_src->registerSink(additional_audiofilter, true);
     prev_src = additional_audiofilter;
